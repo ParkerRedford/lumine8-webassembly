@@ -1,5 +1,0 @@
-obj\Debug\net7.0\Protos/Main.cs \
-obj\Debug\net7.0\Protos/MainGrpc.cs: C:/Users/Parker/.nuget/packages/grpc.tools/2.50.0/build/native/include/google/protobuf/timestamp.proto\
- C:/Users/Parker/.nuget/packages/grpc.tools/2.50.0/build/native/include/google/protobuf/wrappers.proto\
- C:/Users/Parker/.nuget/packages/grpc.tools/2.50.0/build/native/include/google/protobuf/Empty.proto\
- Protos/main.proto
