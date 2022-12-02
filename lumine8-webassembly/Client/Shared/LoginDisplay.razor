@@ -1,0 +1,21 @@
+﻿@inject AuthenticationService authService
+@inject AccountManager signInManager
+@inject NavigationManager navigationManager
+
+@if (authService.isAuthenticated)
+{
+    <a href="/Account/Profile" @onclick="@(() => navigationManager.NavigateTo("/Account/Profile", true))" class="nav-link btn btn-link text-light my-2 me-3">Hello, @authService.loginUser.Username</a>
+}
+else
+{
+    <div class="my-2">
+        <a href="/Register" @onclick="@(() => navigationManager.NavigateTo("/Register", true))" class="nav-link btn btn-link text-light my-2 me-3">Register</a>
+        <a href="/Account/Manager" @onclick="@(() => navigationManager.NavigateTo("/Account/Manager", true))" class="nav-link btn btn-link text-light">Account Manager</a>
+    </div>
+}
+
+@code{
+    protected override async Task OnInitializedAsync()
+    {
+    }
+}

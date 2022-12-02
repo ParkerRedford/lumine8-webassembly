@@ -1,0 +1,178 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+
+@inject EnumToString enumConverter
+
+@{
+    var i = 0;
+    foreach (var e in educationList)
+    {
+        List<string> guids = new();
+        for (int k = 0; 4 >= k; k++)
+            guids.Add(Guid.NewGuid().ToString());
+
+        var j = i;
+        string date = "";
+        if (e.Key.GraduationDate != 0)
+        {
+            date = " - " + e.Key.GraduationDate;
+        }
+        e.Key.SchoolName = (e.Key.SchoolName != null) ? e.Key.SchoolName : "No School Name";
+
+        <div class="d-flex flex-row my-1">
+            <label class="mx-2 my-auto">@e.Key.SchoolName@(date)</label>
+
+            <div class="ms-auto my-1">
+                @if (e.Value)
+                {
+                    <button class="btn btn-info me-2" @onclick="() => educationList[e.Key] = false">
+                        <RadzenIcon Icon="visibility" Style="display: flex !important;" />
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-info me-2" @onclick="() => educationList[e.Key] = true">
+                        <RadzenIcon Icon="visibility_off" Style="display: flex !important;" />
+                    </button>
+                }
+            </div>
+        </div>
+
+        if (e.Value)
+        {
+            <div class="card card-header p-2 m-0" style="border: 0; border-bottom: 1px solid; background-color: initial !important;">
+                <EditForm Model="e.Key" OnValidSubmit="OnUpdate">
+                    @if (!disable)
+                    {
+                        <button type="button" @onclick="DeleteEducation" class="btn btn-danger me-auto mb-1" style="width: max-content;">
+                            <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                        </button>
+
+                        async Task DeleteEducation()
+                        {
+                            var del = await MainClient.DeleteEducationAsync(e.Key);
+                            model.EducationList.Remove(del);
+                            educationList.Remove(del);
+                            alerts.Remove(alerts[j]);
+                        }
+                    }
+                    <div class="list-group form-group">
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[0]">School Name</label>
+                            @if (disable)
+                            {
+                                <p>@e.Key.SchoolName</p> 
+                            }
+                            else
+                            {
+                                <InputText id="@guids[0]" class="form-control" @bind-Value="e.Key.SchoolName"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item input-group d-flex flex-column w-100">
+                            <label for="@guids[1]">Degree</label>
+                            @if (disable)
+                            {
+                                <p>@enumConverter.ToLevel((Level)e.Key.Degree)</p>
+                            }
+                            else
+                            {
+                                <InputSelect id="@guids[1]" @bind-Value="e.Key.Degree" class="form-select" style="width: max-content;">
+                                    @foreach (var c in System.Enum.GetValues(typeof(Level)))
+                                    {
+                                        <option value="@c">@enumConverter.ToLevel((Level)c)</option>
+                                    }
+                                </InputSelect>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[2]">Major</label>
+                            @if (disable)
+                            {
+                                <p>@e.Key.Major</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[2]" class="form-control" @bind-Value="e.Key.Major"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[3]">Minor</label>
+                            @if (disable)
+                            {
+                                <p>@e.Key.Minor</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[3]" class="form-control" @bind-Value="e.Key.Minor"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[4]">Graduation Date</label>
+                            @if (disable)
+                            {
+                                <p>@e.Key.GraduationDate</p>
+                            }
+                            else
+                            {
+                                <InputNumber id="guids[4]" class="form-control" @bind-Value="e.Key.GraduationDate"></InputNumber>
+                            }
+
+                        </div>
+
+                    </div>
+                    @if (disable == false)
+                    {
+                        <button class="btn btn-success d-flex mt-2 ms-auto" style="width: max-content;" type="submit">
+                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                        </button>
+                    }
+                </EditForm>
+
+                <MyAlert @ref="alerts[j]" Class="mt-2" />
+            </div>
+
+            async Task OnUpdate()
+            {
+                await MainClient.UpdateEducationAsync(e.Key);
+                alerts[j].InvokeAlert($"Updated", MyAlert.Alerts.Success, true);
+            }
+        }
+        i++;
+    }
+}
+
+@if (!disable)
+{
+    <span class="m-2">
+        <button @onclick="CreateEducation" class="btn btn-success">
+            <RadzenIcon Icon="add_circle" Style="display: flex !important;" />
+        </button>
+    </span>
+}
+
+@code {
+    [Parameter] public SharedUser User { get; set; }
+
+    [Parameter] public bool disable { get; set; }
+
+    private Dictionary<Education, bool> educationList = new();
+    private IList<MyAlert> alerts = new List<MyAlert>();
+
+    private EducationRepsonse model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var es = await MainClient.GetEducationAsync(new Id { Id_ = User.Id });
+        foreach(var e in es.EducationList)
+        {
+            educationList.Add(e, false);
+            alerts.Add(new MyAlert());
+        }
+    }
+
+    private async Task CreateEducation()
+    {
+        educationList.Add(await MainClient.CreateEducationAsync(new Education { UserId = User.Id }), true);
+        alerts.Add(new MyAlert());
+    }
+}

@@ -1,0 +1,765 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    .arrow {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .ql-editing, .ql-tooltip {
+        left: 0 !important;
+        z-index: 1 !important;
+    }
+
+    .rz-html-editor-button:disabled {
+        border-radius: 1rem !important;
+    }
+
+    iframe, embed {
+        width: 100% !important;
+        max-width: inherit !important;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <style>
+        .replies {
+            width: 100% !important;
+        }
+    </style>
+}
+@if (!render)
+{
+    <div class="card mx-0 my-5 p-2 post">
+        <div class="d-flex flex-row mb-3">
+            <img src="/p/No_image_available.svg" style="width: 3rem; height: 3rem; border-radius: 2rem;" />
+
+            <div class="d-flex flex-column ms-2">
+                <p class="m-0 p-0">Name | @@Username</p>
+                <p>Now | @DateTime.UtcNow.ToString("ddd, dd MMM \\'y : hh:mm tt")</p>
+            </div>
+        </div>
+        <p>Please wait...</p>
+    </div>
+}
+else
+{
+    <div class="card mx-0 my-5 p-2 post">
+        <div class="d-flex flex-row mb-3">
+            @if (!string.IsNullOrEmpty(model.Group.GroupId) && model.RoomGroup.GroupId == model.Group.GroupId)
+            {
+                if ((model.SectionRoles != null && model.SignedInUserRole.RoleType >= model.SectionRoles.ShareLumine) && authService.isAuthenticated)
+                {
+                    <Shares shares="model.Shares.ToList()" room="model.Room" friends="model.MyFriends.AsQueryable()" signedInUser="model.SignedInUser"></Shares>
+                }
+                if (model.Shares.Count() > -1)
+                {
+                    <div class="ms-1">
+                        <p style="font-size: 9pt;" class="mb-0">Shared by @(model.Shares.Count())</p>
+                        <p class="w-100 text-center mb-0" style="font-size: 9pt;">
+                            Group:
+                            <a @onclick="GoToGroup" href="/g/@(model.RoomGroup.GroupId)">@model.Group.Name</a>
+                        </p>
+                    </div>
+
+                    async Task GoToGroup()
+                    {
+                        navigationManager.NavigateTo($"/g/{model.RoomGroup.GroupId}", true);
+                    }
+                }
+            }
+            else
+            {
+                if ((model.Owner.AllowSharing == true || model.SignedInUser.Id == model.Owner.Id) && authService.isAuthenticated)
+                {
+                    <Shares shares="model.Shares.ToList()" room="model.Room" friends="model.MyFriends.AsQueryable()" signedInUser="model.SignedInUser"></Shares>
+                }
+                if (model.Shares.Count() > -1)
+                {
+                    <p style="font-size: 9pt;" class="ms-1">Shared by @(model.Shares.Count())</p>
+                }
+            }
+
+            @if ((model.SignedInUser != null && model.Owner.Id == model.SignedInUser.Id) || (!string.IsNullOrEmpty(model.RoomGroup.GroupId) && model.SignedInUserRole.RoleType >= model.SectionRoles.RemoveLumine))
+            {
+                <button @onclick="() => dEdit = !dEdit" formtarget="_blank" class="btn btn-info ms-auto me-1 py-0 px-1">
+                    <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                </button>
+
+                <button class="btn btn-danger" @onclick="RemovePost">
+                    <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                </button>
+
+                async Task RemovePost()
+                {
+                    await hubConnection.SendAsync("RemovePost", model.Message);
+                    await OnClick.InvokeAsync();
+                }
+            }
+        </div>
+
+        <div class="p-2">
+            <div class="d-flex flex-row">
+                @{
+                    if (string.IsNullOrWhiteSpace(model.ProfilePicture?.ProfilePictureId))
+                    {
+                        <img src="/p/No_image_available.svg" style="width: 3rem; height: 3rem; border-radius: 2rem;" />
+                    }
+                    else
+                    {
+                        <img src="@variables.uri/p/u/@(model.ProfilePicture.UserId)/@(model.Picture.FileName)" style="width: 3rem; height: 3rem; border-radius: 2rem;" />
+                    }
+
+                    <div class="d-flex flex-column ms-2">
+                        <p class="m-0 p-0">@model.Owner.Name | <a @onclick="GoToPerson" href="/u/@(model.Owner.Username)">@@@model.Owner.Username</a></p>
+                        <p>@time | @model.Message.Date.ToDateTime().ToString("ddd, dd MMM \\'y : hh:mm tt")</p>
+                    </div>
+
+                    async Task GoToPerson()
+                    {
+                        navigationManager.NavigateTo($"/u/{model.Owner.Username}", true);
+                    }
+                }
+            </div>
+
+            @if (dEdit)
+            {
+                <EditForm Model="model.Message" OnValidSubmit="SaveEdit" class="ms-auto my-2" style="z-index: 1;">
+                    <RadzenHtmlEditor @bind-Value="model.Message.MessageString">
+                        <RadzenHtmlEditorUndo />
+                        <RadzenHtmlEditorRedo />
+                        <RadzenHtmlEditorSeparator />
+                        <RadzenHtmlEditorBold />
+                        <RadzenHtmlEditorItalic />
+                        <RadzenHtmlEditorUnderline />
+                        <RadzenHtmlEditorStrikeThrough />
+                        <RadzenHtmlEditorSeparator />
+                        <RadzenHtmlEditorColor />
+                        <RadzenHtmlEditorBackground />
+                        <RadzenHtmlEditorRemoveFormat />
+                        <RadzenHtmlEditorSeparator />
+                        <RadzenHtmlEditorLink />
+                        <RadzenHtmlEditorUnlink />
+                    </RadzenHtmlEditor>
+
+                    <div class="d-flex flex-row mt-2">
+                        <MyDropdown Class="ms-1" ButtonClass="btn btn-info">
+                            <ButtonFragment>
+                                <RadzenIcon Icon="tag" Style="display: flex !important;" />
+                            </ButtonFragment>
+                            <DropdownContent>
+                                <div class="d-flex flex-row">
+                                    <input type="text" @bind-value="hashtag" class="form-control" />
+                                    <button type="button" @onclick="AddHashtag" class="btn btn-success">
+                                        <RadzenIcon Icon="input" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+
+                                <div class="d-flex flex-row">
+                                    @foreach (var h in model.MessageHashtags)
+                                    {
+                                        <input type="button" @onclick="RemoveHashtag" class="btn btn-danger" value="@h.Name" />
+
+                                        async Task RemoveHashtag()
+                                        {
+                                            await hubConnection.SendAsync("RemoveHashtag", h);
+                                        }
+                                    }
+                                </div>
+
+                                @{
+                                    async Task AddHashtag()
+                                    {
+                                        var lh = new MessageHashtag { Name = hashtag, RoomId = model.RoomToMessage.RoomId };
+                                        await hubConnection.SendAsync("AddHashtag", lh);
+                                    }
+                                }
+                            </DropdownContent>
+                        </MyDropdown>
+
+                        <button type="submit" class="btn btn-success ms-auto me-1">
+                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                        </button>
+                        <button @onclick="() => dEdit = false" type="button" class="btn btn-danger">
+                            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                        </button>
+                    </div>
+                </EditForm>
+
+                async Task SaveEdit()
+                {
+                    try
+                    {
+                        var ser = new SaveEditRequest { Message = model.Message };
+                        ser.Hashtags.AddRange(model.MessageHashtags);
+                        await MainClient.SaveEditAsync(ser);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        alert.InvokeAlert("Can't edit post after 30 minutes.", MyAlert.Alerts.Danger);
+                    }
+
+                    dEdit = false;
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(model.Message.MessageString))
+                {
+                    <div style="margin-bottom: 1rem;">@((MarkupString)model.Message.MessageString)</div>
+                }
+            }
+
+            <!--Pictures-->
+            @if (!string.IsNullOrWhiteSpace(model.CategoryRooms.CategoryRoomsId))
+            {
+                <div class="d-flex flex-row" style="font-size: 24pt;">
+                    @if (model.Categories.Count() > 1)
+                    {
+                        <p class="arrow my-auto" @onclick="IndexDown">⮜</p>
+                    }
+                    <img class="overflow-auto" style="width: 100%; border-radius: 0.5rem;" src="@variables.uri/p/u/@(model.Message.SenderId)/@(model.ImageIndex.Skip(index).FirstOrDefault().FileName)" />
+                    @if (model.Categories.Count() > 1)
+                    {
+                        <p class="arrow my-auto" @onclick="IndexUp">⮞</p>
+                    }
+
+                    @{
+                        async Task IndexDown()
+                        {
+                            index--;
+                            if (index < 0)
+                                index = 0;
+                        }
+                        async Task IndexUp()
+                        {
+                            if (index + 1 < model.Categories.Count())
+                                index++;
+                        }
+                    }
+                </div>
+
+                <p class="text-center">@(index + 1) / @(model.Categories.Count())</p>
+                <p>Category: @(model.Categories.FirstOrDefault().Category) <a href="/u/p/@(model.Owner.Username)/c/@(model.Categories.FirstOrDefault().Category)">🔗</a></p>
+            }
+            @if (!string.IsNullOrWhiteSpace(model.Group.GroupId) && !string.IsNullOrWhiteSpace(model.RoomGroup.GroupId) && !string.IsNullOrWhiteSpace(model.CategoryRooms.CategoryRoomsId) && model.RoomGroup.GroupId == model.Group.GroupId && model.CategoryRooms.RoomId == room.RoomId)
+            {
+                <div class="d-flex flex-row" style="font-size: 24pt;">
+                    <p class="arrow my-auto" @onclick="IndexDown">⮜</p>
+                    <img class="overflow-auto" style="width: 100%; border-radius: 0.5rem;" src="@variables.uri/p/g/@(model.RoomGroup.GroupId)/@(model.GroupImages.Skip(index).FirstOrDefault().FileName)" />
+                    <p class="arrow my-auto" @onclick="IndexUp">⮞</p>
+
+                    @{
+                        async Task IndexDown()
+                        {
+                            index--;
+                            if (index < 0)
+                                index = 0;
+                        }
+                        async Task IndexUp()
+                        {
+                            if (index + 1 < model.GroupImagesCategory.Count())
+                                index++;
+                        }
+                    }
+                </div>
+                <p class="text-center">@(index + 1) / @(model.Categories.Count())</p>
+                <p>Category: @(model.Categories.FirstOrDefault().Category) <a href="/g/p/@(model.RoomGroup.GroupId)/c/@(model.GroupImagesCategory.FirstOrDefault().Category)">🔗</a></p>
+            }
+            @if (model.ImageRooms.Count() > 0 && model.ImageRooms.Count() > 0)
+            {
+                var iImage = model.ImagesFromRoom.Where(x => x.ImageId == model.ImageRooms.Skip(index).FirstOrDefault().ImageId).FirstOrDefault();
+                <div class="d-flex flex-row" style="font-size: 24pt;">
+                    @if (model.ImageRooms.Count() > 1)
+                    {
+                        <p class="arrow my-auto" @onclick="IndexDown">⮜</p>
+                    }
+                    <img class="overflow-auto" style="width: 100%; border-radius: 0.5rem;" src="@variables.uri/p/u/@(model.Message.SenderId)/@(iImage.FileName)" />
+                    @if (model.ImageRooms.Count() > 1)
+                    {
+                        <p class="arrow my-auto" @onclick="IndexUp">⮞</p>
+                    }
+                    @{
+                        async Task IndexDown()
+                        {
+                            index--;
+                            if (index < 0)
+                                index = 0;
+                        }
+                        async Task IndexUp()
+                        {
+                            if (index + 1 < model.ImagesFromRoom.Count())
+                                index++;
+                        }
+                    }
+                </div>
+                @if (model.ImageRooms.Count() > 1)
+                {
+                    <p class="text-center">@(index + 1) / @(model.ImagesFromRoom.Count())</p>
+                }
+                <p>Category: @(iImage.Category) <a href="/u/p/@(model.Owner.Username)/c/@(iImage.Category)">🔗</a></p>
+            }
+
+            <div class="d-flex flex-row me-auto">
+                <div class="justify-content-center d-flex flex-column ms-0">
+                    <div class="progress mt-2 text-center" style="margin-bottom: 0; width: 100%; height: 3px">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: @(total.ToString("0%"))" aria-valuenow="@(upVotes)" aria-valuemin="0" aria-valuemax="@(downVotes + upVotes)"></div>
+                    </div>
+                    <MyDropdown ButtonStyle="background-color: initial; border: 0;" ContentClass="d-flex flex-column w-100" ContentStyle="min-width: max-content;">
+                        <ButtonFragment>
+                            @if (authService.isAuthenticated)
+                            {
+                                <div class="d-flex flex-row w-auto mt-2">
+                                    @if (vote == null && string.IsNullOrWhiteSpace(vote?.VoteId))
+                                    {
+                                        <span class="my-auto">@upVotes</span>
+                                        <button @onclick="voteUp" class="btn btn-success mx-1 w-100" style="font-size: 6pt;">
+                                            <RadzenIcon Icon="wb_sunny" Style="display: flex !important; margin: auto;" />
+                                        </button>
+                                        <span class="my-auto">@downVotes</span>
+                                        <button @onclick="voteDown" class="btn btn-danger mx-1 w-100" style="font-size: 6pt;">
+                                            <RadzenIcon Icon="lightbulb" Style="display: flex !important; margin: auto;" />
+                                        </button>
+
+                                        async Task voteUp()
+                                        {
+                                            vote = new Vote { UserId = model.SignedInUser.Id, UpDown = true, RoomId = room.RoomId, Date = Timestamp.FromDateTime(DateTime.UtcNow) };
+                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                        }
+
+                                        async Task voteDown()
+                                        {
+                                            vote = new Vote { UserId = model.SignedInUser.Id, UpDown = false, RoomId = room.RoomId, Date = Timestamp.FromDateTime(DateTime.UtcNow) };
+                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (vote.UpDown == false)
+                                        {
+                                            <span class="my-auto">@upVotes</span>
+                                            <button @onclick="voteUp" class="btn btn-success mx-1 w-100" style="font-size: 6pt;">
+                                                <RadzenIcon Icon="wb_sunny" Style="display: flex !important; margin: auto;" />
+                                            </button>
+                                            <span class="my-auto">@downVotes</span>
+                                            <button @onclick="removeVote" class="btn btn-danger-fill mx-1 w-100" style="font-size: 6pt;">
+                                                <RadzenIcon Icon="lightbulb" Style="display: flex !important; margin: auto;" />
+                                            </button>
+                                        }
+                                        if (vote.UpDown == true)
+                                        {
+                                            <span class="my-auto">@upVotes</span>
+                                            <button @onclick="removeVote" class="btn btn-success-fill mx-1 w-100" style="font-size: 6pt;">
+                                                <RadzenIcon Icon="flare" Style="display: flex !important; margin: auto;" />
+                                            </button>
+                                            <span class="my-auto">@downVotes</span>
+                                            <button @onclick="voteDown" class="btn btn-danger mx-1 w-100" style="font-size: 6pt;">
+                                                <RadzenIcon Icon="lightbulb" Style="display: flex !important; margin: auto;" />
+                                            </button>
+                                        }
+
+                                        async Task voteUp()
+                                        {
+                                            vote.UpDown = true;
+                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                        }
+
+                                        async Task voteDown()
+                                        {
+                                            vote.UpDown = false;
+                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                        }
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-row justify-content-center">
+                                    <p class="d-flex m-2" style="font-size: 6pt;">
+                                        <span class="my-auto">@upVotes</span>
+                                        <RadzenIcon Icon="flare" Style="display: flex !important; margin: auto;" />
+                                    </p>
+                                    <p class="d-flex m-2" style="font-size: 6pt;">
+                                        <span class="my-auto">@downVotes</span>
+                                        <RadzenIcon Icon="lightbulb" Style="display: flex !important; margin: auto;" />
+                                    </p>
+                                </div>
+                            }
+                        </ButtonFragment>
+                        <DropdownContent>
+                            @foreach (var u in model.SuVotes)
+                            {
+                                <div class="d-flex flex-row">
+                                    @{
+                                        var v = model.Votes.Where(x => x.UserId == u.Id).FirstOrDefault();
+                                        if (v.UpDown)
+                                        {
+                                            <RadzenIcon Icon="arrow_drop_up" Style="display: flex !important; color: green;" />
+                                        }
+                                        else
+                                        {
+                                            <RadzenIcon Icon="arrow_drop_down" Style="display: flex !important; color: red;" />
+                                        }
+                                        <a href="/u/@u.Name">@u.Username</a>
+                                    }
+                                </div>
+                            }
+                        </DropdownContent>
+                    </MyDropdown>
+
+                </div>
+                <a href="/r/@(room.RoomId)" class="d-flex flex-row ms-auto" target="_blank">
+                    <RadzenIcon Icon="message" Style="display: flex !important; margin: auto;" />
+                    <p class="my-auto mx-2" style="font-size: 16pt;">@model.MessageCount</p>
+                </a>
+            </div>
+        </div>
+
+        @if (model.MessageHashtags.Count() > 0)
+        {
+            <div class="d-flex flex-row mx-2">
+                <h4 class="my-auto">#</h4>
+                @foreach (var h in model.MessageHashtags)
+                {
+                    <input type="button" class="btn btn-secondary m-1" value="@h.Name" disabled />
+                }
+            </div>
+        }
+
+        @if (room.AllowComments)
+        {
+            <hr />
+            if (authService.isAuthenticated)
+            {
+                <div class="d-flex flex-column position-relative">
+                    @if (commentButtons)
+                    {
+                        <button type="button" @onclick="Close" class="btn btn-danger ms-auto me-0">
+                            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                        </button>
+                    }
+                    <EditForm Model="comment" OnValidSubmit="PostComment" class="mb-4">
+                        <RadzenHtmlEditor @bind-Value="comment.MessageString" Placeholder="Write a comment..." @onfocusin="() => commentButtons = true">
+                            <RadzenHtmlEditorUndo />
+                            <RadzenHtmlEditorRedo />
+                            <RadzenHtmlEditorSeparator />
+                            <RadzenHtmlEditorBold />
+                            <RadzenHtmlEditorItalic />
+                            <RadzenHtmlEditorUnderline />
+                            <RadzenHtmlEditorStrikeThrough />
+                            <RadzenHtmlEditorSeparator />
+                            <RadzenHtmlEditorColor />
+                            <RadzenHtmlEditorBackground />
+                            <RadzenHtmlEditorRemoveFormat />
+                            <RadzenHtmlEditorSeparator />
+                            <RadzenHtmlEditorLink />
+                            <RadzenHtmlEditorUnlink />
+                        </RadzenHtmlEditor>
+
+                        @if (commentButtons)
+                        {
+                            <div class="d-flex flex-row mt-2">
+                                <MyDropdown ButtonClass="btn btn-info" ContentClass="myform">
+                                    <ButtonFragment>
+                                        <span style="font-family: monospace;">@("</>")</span>
+                                    </ButtonFragment>
+                                </MyDropdown>
+
+                                <button type="submit" class="btn btn-success ms-auto me-0">
+                                    <RadzenIcon Icon="input" Style="display: flex !important;" />
+                                </button>
+                            </div>
+                        }
+                    </EditForm>
+                </div>
+
+                async Task Close()
+                {
+                    comment = new Message { SenderId = model.SignedInUser.Id };
+                    commentButtons = false;
+                }
+
+                async Task PostComment()
+                {
+                    await hubConnection.SendAsync("PostComment", comment, model.Message, room.RoomId);
+
+                    comment = new Message { SenderId = model.SignedInUser.Id };
+
+                    commentButtons = false;
+                }
+            }
+
+            if (messages.Count() > 0)
+            {
+                if (all)
+                {
+                    foreach (var m in messages.OrderByDescending(x => x.Date))
+                    {
+                        <Replies isAuthenticated="authService.isAuthenticated" message="m" DeleteEvent="Delete" signedInUser="model.SignedInUser"></Replies>
+                        async Task Delete()
+                        {
+                            messages.Remove(m);
+                            StateHasChanged();
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var m in messages.OrderByDescending(x => x.Date))
+                    {
+                        var friend = model.Friends.Where(x => x.FriendId == m.SenderId).FirstOrDefault(); ;
+
+                        if (friend != null)
+                        {
+                            <div class="my-1 p-3 ms-auto replies" style="background-color: lightgrey; border-radius: 1rem; width: 75%;">
+                                <Replies isAuthenticated="authService.isAuthenticated" message="m" DeleteEvent="Delete" signedInUser="model.SignedInUser"></Replies>
+                            </div>
+                        }
+                        else if (m.SenderId == model.SignedInUser.Id)
+                        {
+                            <div class="my-1 p-3 replies" style="background-color: #937faf3b; border-radius: 1rem; width: 75%;">
+                                <Replies isAuthenticated="authService.isAuthenticated" message="m" DeleteEvent="Delete" signedInUser="model.SignedInUser"></Replies>
+                            </div>
+                        }
+
+                        async Task Delete()
+                        {
+                            messages.Remove(m);
+                            StateHasChanged();
+
+                            await hubConnection.InvokeAsync("RemoveReply", m);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            <p>User disabled comments</p>
+        }
+
+        <MyAlert @ref="alert"></MyAlert>
+    </div>
+}
+
+@code {
+    [Parameter] public Room room { get; set; }
+    [Parameter] public bool all { get; set; } = true;
+    [Parameter] public bool reload { get; set; } = true;
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private HubConnection hubConnection;
+
+    private bool render = false;
+
+    private bool dEdit = false;
+    private string rich, commentRich;
+    private Message comment = new();
+
+    private MyAlert alert;
+
+    private List<Message> messages = new();
+
+    private TimeSpan elapsed;
+    private string time = "";
+
+    private int index = 0;
+
+    private Vote vote = new();
+    private decimal upVotes = 0, downVotes = 0, total = 0;
+    private bool voted = false;
+
+    private bool commentButtons = false;
+
+    private bool dHashtags = false;
+    private string hashtag = "";
+
+    private PostPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetPostModelAsync(room, authService.headers);
+        messages = model.Messages.OrderByDescending(x => x.Date).ToList();
+
+        comment = new Message { SenderId = model.SignedInUser.Id };
+
+        hubConnection = new HubConnectionBuilder()
+            .WithAutomaticReconnect()
+            .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/postreal"))
+            .Build();
+
+        hubConnection.On<MessageHashtag>("AddedHashtag", (hashtag) =>
+        {
+            model.MessageHashtags.Add(hashtag);
+            StateHasChanged();
+        });
+
+        hubConnection.On<MessageHashtag>("RemovedHashtag", (hashtag) =>
+        {
+            model.MessageHashtags.Remove(hashtag);
+            StateHasChanged();
+        });
+
+        hubConnection.On<Vote, SharedUser, bool>("HasVoted", async (vote, suVote, delete) =>
+        {
+            var v = model.Votes.Where(x => x.VoteId == vote.VoteId).FirstOrDefault();
+            if (v == null)
+            {
+                model.Votes.Add(vote);
+                model.SuVotes.Add(suVote);
+            }
+            else
+            {
+                var sv = model.SuVotes.Where(x => x.Id == v.UserId).FirstOrDefault();
+
+                if (v != null)
+                    model.Votes.Remove(v);
+                if (sv != null)
+                    model.SuVotes.Remove(sv);
+
+                if (!delete)
+                {
+                    model.Votes.Add(vote);
+                    model.SuVotes.Add(sv);
+                }
+            }
+
+            await Votes();
+            await UpdateVariables();
+
+            render = true;
+            StateHasChanged();
+        });
+
+        hubConnection.On<Message>("RemovedReply", (msg) =>
+        {
+            messages.Remove(msg);
+            StateHasChanged();
+        });
+
+        hubConnection.On<Message>("PostedComment", (comment) =>
+        {
+            messages.Add(comment);
+            StateHasChanged();
+        });
+
+        hubConnection.On("RemovedPost", () =>
+        {
+            OnClick.InvokeAsync();
+        });
+
+        hubConnection.On("HasRemovedRoom", () =>
+        {
+            OnClick.InvokeAsync();
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("Connect", room.RoomId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (reload)
+        {
+            render = false;
+            StateHasChanged();
+
+            model = await MainClient.GetPostModelAsync(room, authService.headers);
+            messages = model.Messages.OrderByDescending(x => x.Date).ToList();
+
+            comment = new Message { SenderId = model.SignedInUser.Id };
+
+            Votes();
+            await UpdateVariables();
+
+            render = true;
+            StateHasChanged();
+        }
+    }
+
+    async Task UpdateVariables()
+    {
+        //elapsed = DateTime.UtcNow.Subtract(msg.Date.ToUniversalTime());
+        elapsed = DateTime.UtcNow - model.Message.Date.ToDateTime().ToUniversalTime();
+
+        if (elapsed.TotalSeconds < 59)
+            time = elapsed.TotalSeconds.ToString("0") + " seconds ago";
+        else if (elapsed.TotalMinutes < 59)
+            time = elapsed.TotalMinutes.ToString("0") + " minutes ago";
+        else if (elapsed.TotalHours < 23)
+            time = elapsed.TotalHours.ToString("0") + " hours ago";
+        else if (elapsed.TotalDays < 30)
+            time = elapsed.TotalDays.ToString("0") + " days ago";
+        else if (elapsed.TotalDays > 364)
+            time = (elapsed.TotalDays / 365).ToString("0") + " years ago";
+        else if (elapsed.TotalDays > 29)
+            time = (elapsed.TotalDays / 30).ToString("0") + " months ago";
+    }
+
+    //async Task voteUp()
+    //{
+    //    vote.UpDown = true;
+    //    vote.Date = Timestamp.FromDateTime(DateTime.UtcNow);
+
+    //    await hubConnection.SendAsync("UpdateVote", vote, room.RoomId);
+
+    //    await UpdateVotes();
+    //}
+
+    //async Task voteDown()
+    //{
+    //    vote.UpDown = false;
+    //    vote.Date = Timestamp.FromDateTime(DateTime.UtcNow);
+
+    //    await hubConnection.SendAsync("UpdateVote", vote, room.RoomId);
+
+    //    await UpdateVotes();
+    //}
+
+    async Task removeVote()
+    {
+        await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, true);
+    }
+
+    //async Task UpdateVotes()
+    //{
+    //    var lvotes = await MainClient.GetVotesAsync(model.Room, authService.headers);
+
+    //    model.Votes.Clear();
+    //    model.Votes.AddRange(lvotes.Votes);
+    //}
+
+    async Task Votes()
+    {
+        upVotes = model.Votes.Where(x => x.UpDown == true).Count();
+        downVotes = model.Votes.Where(x => x.UpDown == false).Count();
+
+        if (model.SignedInUser != null && !string.IsNullOrWhiteSpace(model.SignedInUser.Id))
+            vote = model.Votes.Where(x => x.UserId == model.SignedInUser.Id).FirstOrDefault();
+
+        if (downVotes == 0 && upVotes == 0)
+        {
+            total = 0.5M;
+        }
+        else if (downVotes == 0)
+        {
+            total = 1;
+        }
+        else
+        {
+            total = (upVotes / downVotes) / 2;
+        }
+    }
+
+    //async Task IDisposable.Dispose()
+    //{
+    //    if (hubConnection.State == HubConnectionState.Connected)
+    //        await hubConnection.SendAsync("Disconnect", room.RoomId);
+    //}
+}

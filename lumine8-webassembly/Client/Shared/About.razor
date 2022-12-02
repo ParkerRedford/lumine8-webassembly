@@ -1,0 +1,148 @@
+﻿@inject MainProto.MainProtoClient MainClient
+
+@inject NavigationManager navigationManager
+@inject AuthenticationService authService
+
+@inject EnumToString enumConverter
+
+<style>
+    td {
+        text-align: left;
+    }
+
+    .table > :not(:first-child) {
+        border-top: 1px solid lightgrey;
+    }
+</style>
+
+@if (render)
+{
+    <table class="table m-0">
+        <thead></thead>
+        <tbody>
+            <tr class="d-flex flex-column card-columns">
+                @if (change)
+                {
+                    <td>
+                        <label for="Name">Name</label>
+                        <EditForm Model="User">
+                            <InputText @bind-Value="User.Name" class="form-control" id="Name"></InputText>
+                        </EditForm>
+                    </td>
+                }
+
+                @if (((model.ProfileSecurity.Sex == SecurityLevel.PrivateLevel) && (model.PrivateProfiles != null)) 
+                || (model.ProfileSecurity.Sex == SecurityLevel.FriendsLevel && model.IsFriend) 
+                || model.ProfileSecurity.Sex == SecurityLevel.PublicLevel 
+                || isMod)
+                {
+                    <td>
+                        <label for="Sex" class="d-flex flex-column">Sex</label>
+                        @if (!change)
+                        {
+                            <p>@model.About.Sex</p>
+                        }
+                        else
+                        {
+                            <EditForm Model="model.About">
+                                <InputSelect @bind-Value="model.About.Sex" class="form-select" id="Sex">
+                                    @foreach (var sex in System.Enum.GetValues(typeof(Sex)))
+                                                {
+                                        <option value="@sex">@sex</option>
+                                                }
+                                </InputSelect>
+                            </EditForm>
+                        }
+                    </td>
+                }
+                else
+                {
+                    <td>
+                        <label for="Name">Name</label>
+                        <p>Other</p>
+                    </td>
+                }
+                @if (((model.ProfileSecurity.Relationship == SecurityLevel.PrivateLevel) && (model.PrivateProfiles != null))
+                || (model.ProfileSecurity.Relationship == SecurityLevel.FriendsLevel && model.IsFriend)
+                || model.ProfileSecurity.Relationship == SecurityLevel.PublicLevel 
+                || isMod)
+                {
+                    <td>
+                        <label for="RelationshipStatus">Relationship Status</label>
+                        @if (!change)
+                        {
+                            <p>@enumConverter.ToStatus((lumine8_GrpcService.Status)model.About.MartialStatus)</p>
+                        }
+                        else
+                        {
+                            <EditForm Model="model.About">
+                                <InputSelect @bind-Value="model.About.MartialStatus" class="form-select" id="RelationshipStatus">
+                                    @foreach (var martial in System.Enum.GetValues(typeof(lumine8_GrpcService.Status)))
+                                                {
+                                        <option value="@martial">@enumConverter.ToStatus((lumine8_GrpcService.Status)martial)</option>
+                                                }
+                                </InputSelect>
+                            </EditForm>
+                        }
+                    </td>
+                }
+                else
+                {
+                    <td>
+                        <label for="RelationshipStatus">Relationship Status</label>
+                        <p>No answer</p>
+                    </td>
+                }
+            </tr>
+        </tbody>
+    </table>
+
+    @if (change)
+    {
+        <div>
+            <button @onclick="UpdateAbout" class="btn btn-success">
+                <RadzenIcon Icon="save" Style="display: flex !important;" />
+            </button>
+            <button @onclick="() => change = false" class="btn btn-danger">
+                <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+            </button>
+        </div>
+
+        async Task UpdateAbout()
+        {
+            await MainClient.UpdateAboutAsync(new UpdateAboutRequest { About = model.About, User = User });
+            change = false;
+            await Callback.InvokeAsync();
+        }
+    }
+    else if (isMod)
+    {
+        <button @onclick="() => change = true" class="btn btn-info">
+            <RadzenIcon Icon="edit" Style="display: flex !important;" />
+        </button>
+    }
+}
+
+@code {
+    [Parameter] public SharedUser User { get; set; }
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public EventCallback Callback { get; set; }
+
+    public bool change { get; set; }
+    private bool render = false;
+    private bool isMod = false;
+
+    private AboutPageModel model = new();
+    private Metadata headers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetAboutPageModelAsync(new Id { Id_ = User.Id });
+
+        if (User.Id == signedInUser.Id)
+            isMod = true;
+
+        render = true;
+        StateHasChanged();
+    }
+}

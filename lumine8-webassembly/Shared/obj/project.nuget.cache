@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "jjRNEC4kNeCeZf7tQa0W9Uq2cca9PruNxTX9kcsZVGuKd1YpVFFjOsGCOtbApV9638rE5cxk9D1qOWF45x1VKA==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Parker\\Desktop\\lumine8 projects\\net7\\New folder\\lumine8-webassembly\\lumine8-webassembly\\Shared\\lumine8-webassembly.Shared.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Parker\\.nuget\\packages\\google.protobuf\\3.21.9\\google.protobuf.3.21.9.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\grpc.core.api\\2.50.0\\grpc.core.api.2.50.0.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\grpc.net.client\\2.50.0\\grpc.net.client.2.50.0.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\grpc.net.common\\2.50.0\\grpc.net.common.2.50.0.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\grpc.tools\\2.50.0\\grpc.tools.2.50.0.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\3.0.3\\microsoft.extensions.logging.abstractions.3.0.3.nupkg.sha512",
+    "C:\\Users\\Parker\\.nuget\\packages\\system.memory\\4.5.3\\system.memory.4.5.3.nupkg.sha512"
+  ],
+  "logs": []
+}

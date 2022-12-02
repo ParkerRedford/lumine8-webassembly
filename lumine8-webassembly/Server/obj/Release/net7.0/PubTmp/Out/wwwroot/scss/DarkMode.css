@@ -1,0 +1,252 @@
+* {
+  font-size: 10pt;
+}
+
+iframe, embed {
+  width: 100% !important;
+  max-width: inherit !important;
+}
+
+.card {
+  margin: 1rem 0.5rem;
+}
+
+.page-link {
+  border: none;
+  color: black;
+  border-radius: 0 !important;
+}
+
+a {
+  text-decoration: none;
+}
+
+nav {
+  width: 100% !important;
+}
+
+.active {
+  border-bottom: 3px solid #494055;
+}
+
+.form-check {
+  padding-left: 3rem;
+}
+
+input:disabled, button:disabled {
+  background-color: #6c757d1f;
+  border-color: black;
+}
+
+/*.youchat {
+    background-color: lightpink;
+}*/
+.otherchat {
+  background-color: #505050;
+}
+
+p, label, summary, details, h3, span, input[type=file], .nav-link {
+  color: white !important;
+}
+
+html, #app {
+  background-color: #181818 !important;
+}
+
+body, html, .dropdown, .input-group-text, form {
+  background-color: #242027;
+}
+
+hr {
+  background-color: grey;
+}
+
+h5, #nav {
+  background-color: #93859e;
+}
+
+header, nav {
+  border: none !important;
+}
+
+header nav, .navColor {
+  background-color: #404040 !important;
+}
+
+nav ul li a {
+  background-color: initial !important;
+}
+
+.card,
+form,
+.like,
+.rz-html-editor-toolbar,
+.rz-html-editor-button,
+.rz-html-editor-content,
+.rz-html-editor-colorpicker,
+.rz-html-editor-colorpicker,
+.rz-colorpicker,
+.rz-colorpicker-trigger,
+.rz-dialog,
+.rz-state-active,
+.rz-tabview-panel,
+.mydropdown, .list-group-item, .mydialogform,
+.rz-tabview, .rz-tabview-nav, .rz-tabview-nav li a {
+  background-color: #303030 !important;
+  color: white !important;
+}
+
+.rz-tabview-selected a {
+  background-color: #606060 !important;
+}
+
+.rz-html-editor-button, .rz-html-editor-colorpicker, .rz-colorpicker-trigger, .rz-colorpicker, .rz-html-editor-toolbar {
+  border-radius: 1rem !important;
+}
+
+/*
+.rz-html-editor, .rz-html-editor-content, .rz-html-editor-toolbar, .card-header {
+    background-color: #c9bdd82b !important;
+}*/
+.mychatbox {
+  background-color: #202020 !important;
+}
+.mychatbox-chat {
+  background-color: #202020 !important;
+}
+
+.mydropdown {
+  box-shadow: 0 0 6px white;
+}
+
+.card-header {
+  background-color: #8c7f96;
+}
+
+.form-select, .form-control {
+  color: white;
+  background-color: #606060;
+}
+
+.form-control::placeholder {
+  color: darkseagreen;
+}
+
+form {
+  background-color: initial !important;
+}
+
+form .card .card-header, .form-group, .field {
+  color: white;
+  background-color: #303030;
+}
+
+.name, .name p {
+  background-color: #afacb5 !important;
+  color: black !important;
+}
+
+h5 {
+  color: black;
+}
+
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  color: black;
+  text-align: center;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.btn:hover {
+  color: lightgrey;
+}
+.btn-link {
+  text-decoration: none;
+  color: #0071c1;
+}
+.btn-primary {
+  color: grey;
+}
+.btn-primary-fill {
+  background-color: #937FAF;
+  border: none !important;
+  box-shadow: none !important;
+}
+.btn-primary-fill:hover {
+  color: wheat;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 12px #655876;
+}
+.btn-info {
+  color: grey;
+}
+.btn-info-fill {
+  background-color: #82c1ff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.btn-info-fill:hover {
+  color: wheat;
+}
+.btn-info:hover {
+  background-color: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  color: #82c1ff;
+}
+.btn-info:not(:hover) {
+  border: none !important;
+}
+.btn-success {
+  color: grey;
+}
+.btn-success-fill {
+  background-color: #7dd42a !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.btn-success-fill:hover {
+  color: wheat;
+}
+.btn-success:hover {
+  background-color: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  color: #7dd42a;
+}
+.btn-success:not(:hover) {
+  border: none !important;
+}
+.btn-danger {
+  color: grey;
+}
+.btn-danger-fill {
+  background-color: #cc1c1cad !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.btn-danger-fill:hover {
+  color: wheat;
+}
+.btn-danger:hover {
+  background-color: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  color: #cc1c1cad;
+}
+.btn-danger:not(:hover) {
+  border: none !important;
+}
+
+/*# sourceMappingURL=DarkMode.css.map */

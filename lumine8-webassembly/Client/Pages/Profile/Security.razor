@@ -1,0 +1,374 @@
+﻿@page "/security"
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+@inject SingletonVariables sv
+
+@inject EnumToString enumConverter
+
+<style>
+    form {
+        padding: 0.5rem;
+    }
+</style>
+
+@if (!sv.isDesktop)
+{
+    <style>
+        .excBtns {
+            justify-content: center !important;
+        }
+    </style>
+}
+
+@if (render)
+{
+    <nav id="nav" class="d-flex flex-row m-auto">
+        <ul class="pagination m-2 w-100">
+            <li class="page-item mx-1">
+                <a class="page-link text-center m-auto" href="/u/@(model.User.Username)">Profile</a>
+            </li>
+            <li class="page-item mx-1">
+                <a class="page-link text-center m-auto" href="/u/p/@(model.User.Username)">Pictures</a>
+            </li>
+
+            <li class="page-item mx-1">
+                <a class="page-link text-center m-auto active" href="/security">Security</a>
+            </li>
+        </ul>
+    </nav>
+
+    <EditForm Model="model.ProfileSecurity" OnValidSubmit="UpdateSecurity" class="myform" style="width: max-content;">
+        <div class="d-flex flex-row">
+            <label for="@guids[0]" class="me-auto my-auto">Sex: </label>
+            <InputSelect id="@guids[0]" @bind-Value="model.ProfileSecurity.Sex" class="form-select" style="width: max-content;">
+                @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[1]" class="me-auto my-auto">Relationship: </label>
+        <InputSelect id="@guids[1]" @bind-Value="model.ProfileSecurity.Relationship" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[2]" class="me-auto my-auto">Pictures: </label>
+        <InputSelect id="@guids[2]" @bind-Value="model.ProfileSecurity.Pictures" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    @*    <div class="d-flex flex-row">
+        <label for="@guids[0]" class="me-auto my-auto">Videos: </label>
+        <InputSelect @bind-Value="profileSecurity.Videos" class="custom-select" id="videos" style="width: max-content;">
+        @foreach (var level in System.Enum.GetValues(typeof(lumine8.Models.Personal.SecurityLevel)))
+        {
+        <option value="@level">@level</option>
+        }
+        </InputSelect>
+        </div>*@
+    <div class="d-flex flex-row">
+        <label for="@guids[3]" class="me-auto my-auto">About me: </label>
+        <InputSelect id="@guids[3]" @bind-Value="model.ProfileSecurity.AboutMe" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[4]" class="me-auto my-auto">Friends: </label>
+        <InputSelect id="@guids[4]" @bind-Value="model.ProfileSecurity.Friends" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[5]" class="me-auto my-auto">Groups: </label>
+        <InputSelect id="@guids[5]" @bind-Value="model.ProfileSecurity.Groups" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[6]" class="me-auto my-auto">Places Lived: </label>
+        <InputSelect id="@guids[6]" @bind-Value="model.ProfileSecurity.PlacesLived" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[7]" class="me-auto my-auto">Work History: </label>
+        <InputSelect id="@guids[7]" @bind-Value="model.ProfileSecurity.WorkHistory" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[8]" class="me-auto my-auto">Education: </label>
+        <InputSelect id="@guids[8]" @bind-Value="model.ProfileSecurity.Education" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[9]" class="me-auto my-auto">Interests: </label>
+        <InputSelect id="@guids[9]" @bind-Value="model.ProfileSecurity.Interests" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <div class="d-flex flex-row">
+        <label for="@guids[10]" class="me-auto my-auto">lumine8 (does not effect friends' feed): </label>
+        <InputSelect id="@guids[10]" @bind-Value="model.ProfileSecurity.Lumine" class="form-select" style="width: max-content;">
+            @foreach (var level in System.Enum.GetValues(typeof(SecurityLevel)))
+                {
+                <option value="@level">@enumConverter.ToSecurityLevel((SecurityLevel)@level)</option>
+                }
+        </InputSelect>
+    </div>
+    <button type="submit" class="btn">
+        <RadzenIcon Icon="save" Style="display: flex !important;" />
+    </button>
+
+    <MyAlert @ref="security"></MyAlert>
+</EditForm>
+
+    <EditForm Model="model.User" OnValidSubmit="UpdateUser" class="myform my-4" style="width: max-content;">
+        <div class="d-flex flex-row my-auto">
+            <label for="@guids[11]">Allow people to send you friend requests</label>
+            <InputCheckbox id="@guids[11]" @bind-Value="model.User.AllowRequests" class="mx-3 my-auto"></InputCheckbox>
+        </div>
+
+        <div class="d-flex flex-row my-auto">
+            <label for="@guids[12]">Allow groups to invite you to join their group</label>
+            <InputCheckbox id="@guids[12]" @bind-Value="model.User.AllowGroupInvites" class="mx-3 my-auto"></InputCheckbox>
+        </div>
+
+        <div class="d-flex flex-row my-auto">
+            <label for="@guids[13]">Allow people to share your posts</label>
+            <InputCheckbox id="@guids[13]" @bind-Value="model.User.AllowSharing" class="mx-3 my-auto"></InputCheckbox>
+        </div>
+
+        <div class="d-flex flex-row my-auto">
+            <label for="@guids[14]">Allow posts to be in your friends' feed</label>
+            <InputCheckbox id="@guids[14]" @bind-Value="model.User.FriendsFeed" class="mx-3 my-auto"></InputCheckbox>
+        </div>
+        <button type="submit" class="btn ms-3">
+            <RadzenIcon Icon="save" Style="display: flex !important;" />
+        </button>
+
+        <MyAlert @ref="main" />
+    </EditForm>
+
+    <div class="border myform p-2" style="border-radius: 1rem;">
+        <h4 class="text-center">Exceptions</h4>
+        <div style="width: max-content; position: relative;">
+
+            <input id="@guids[15]" @onchange="() => bFriends = !bFriends" type="checkbox" checked="@(model.Friends)" />
+            <label for="@guids[15]">Search friends</label>
+
+            <div style="position: relative;">
+                <div class="d-flex flex-row" style="width: max-content;">
+                    <input @oninput="(EventArgs) => Search(EventArgs.Value.ToString())" placeholder="Search to add" class="form-control" type="text" />
+                    <MyAlert @ref="exc"></MyAlert>
+                </div>
+                @if (people != null && people.Count() > 0)
+                {
+                    <div class="w-100 px-1" style="background-color: lightgrey; position: absolute;">
+                        @foreach (var p in people)
+                        {
+                            if (p.Id != model.User.Id)
+                            {
+                                if (bFriends)
+                                {
+                                    if (model.Friends.Where(x => x.FriendId == p.Id).FirstOrDefault() != null)
+                                    {
+                                        <div class="d-flex flex-row my-1">
+                                            <PPName UserId="@p.Id"></PPName>
+                                            <button @onclick="AddException" class="btn ms-auto">
+                                                <RadzenIcon Icon="add" Style="display: flex !important;" />
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-row my-1">
+                                        <PPName UserId="@p.Id"></PPName>
+                                        <button @onclick="AddException" class="btn ms-auto">
+                                            <RadzenIcon Icon="add" Style="display: flex !important;" />
+                                        </button>
+                                    </div>
+                                }
+
+                                async Task AddException()
+                                {
+                                    try
+                                    {
+                                        model.PrivateProfiles.Add(await MainClient.AddExceptionAsync(p, authService.headers));
+                                        exc.InvokeAlert($"{p.Name} is now in your exceptions list", MyAlert.Alerts.Success);
+                                    }
+                                    catch(System.Exception ex)
+                                    {
+                                        exc.InvokeAlert($"{p.Name} is already in your exceptions list", MyAlert.Alerts.Success);
+                                    }
+                                }
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="border my-2" style="background-color: white;">
+            @foreach (var e in model.PrivateProfiles)
+            {
+                var u = model.Users.Where(x => x.Id == e.WhoId).FirstOrDefault();
+
+                List<string> lguids = new();
+                for (int k = 0; 9 > k; k++)
+                    lguids.Add(Guid.NewGuid().ToString());
+
+                <div class="justify-content-center my-2">
+                    <div class="d-flex justify-content-center">
+                        <PPName UserId="@e.UserId"></PPName>
+                    </div>
+                    <EditForm Model="e" OnValidSubmit="UpdateException">
+                        <div class="d-flex flex-row flex-wrap justify-content-center">
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.About" id="@lguids[0]"></InputCheckbox>
+                                <label for="@lguids[0]" class="mb-0 ms-1">About</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.AboutMe" id="@lguids[1]"></InputCheckbox>
+                                <label for="@lguids[1]" class="mb-0 ms-1">About Me</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Friends" id="@lguids[2]"></InputCheckbox>
+                                <label for="@lguids[2]" class="mb-0 ms-1">Friends</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Groups" id="@lguids[3]"></InputCheckbox>
+                                <label for="@lguids[3]" class="mb-0 ms-1">Groups</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.PlacesLived" id="@lguids[4]"></InputCheckbox>
+                                <label for="@lguids[4]" class="mb-0 ms-1">Places Lived</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.WorkHistory" id="@lguids[5]"></InputCheckbox>
+                                <label for="@lguids[5]" class="mb-0 ms-1">Work History</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Education" id="@lguids[6]"></InputCheckbox>
+                                <label for="@lguids[6]" class="mb-0 ms-1">Education</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Interests" id="@lguids[7]"></InputCheckbox>
+                                <label for="@lguids[7]" class="mb-0 ms-1">Interests</label>
+                            </div>
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Pictures" id="@lguids[8]"></InputCheckbox>
+                                <label for="@lguids[8]" class="mb-0 ms-1">Pictures</label>
+                            </div>
+
+                            <div class="d-flex flex-row my-auto mx-1">
+                                <InputCheckbox @bind-Value="e.Lumine" id="@lguids[9]"></InputCheckbox>
+                                <label for="@lguids[9]" class="mb-0 ms-1">See lumine8s</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-row pr-2 excBtns" style="justify-content: right;">
+                            <button type="submit" class="btn me-1">
+                                <RadzenIcon Icon="save" Style="display: flex !important;" />
+                            </button>
+                            <button @onclick="RemoveException" class="btn">
+                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+
+                async Task UpdateException()
+                {
+                    await MainClient.UpdateExceptionAsync(e, authService.headers);
+                    exc.InvokeAlert($"{u.Name} is updated in your exceptions list", MyAlert.Alerts.Info);
+                }
+
+                async Task RemoveException()
+                {
+                    model.PrivateProfiles.Remove(await MainClient.DeleteExceptionAsync(e, authService.headers));
+                    exc.InvokeAlert($"{u.Name} is no longer in your exceptions list", MyAlert.Alerts.Danger);
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool render = false;
+
+    private List<SharedUser> people = new();
+    private bool bFriends = true;
+
+    List<string> guids = new();
+
+    private MyAlert security, main, exc;
+
+    private SecurityPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetSecurityPageModelAsync(new Empty(), authService.headers);
+
+        for (int k = 0; 16 > k; k++)
+            guids.Add(Guid.NewGuid().ToString());
+
+        render = true;
+        StateHasChanged();
+    }
+
+    async void Search(string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            var re = await MainClient.GetPeopleAsync(new Id { Id_ = value });
+            people = re.Users.ToList();
+        }
+        else
+            people = null;
+    }
+
+    private async Task UpdateSecurity()
+    {
+        await MainClient.UpdateSecurityAsync(model.ProfileSecurity, authService.headers);
+        security.InvokeAlert("Updated", MyAlert.Alerts.Info, true);
+    }
+
+    private async Task UpdateUser()
+    {
+        await MainClient.UpdateUserSettingsAsync(model.User, authService.headers);
+        main.InvokeAlert("Updated user settings", MyAlert.Alerts.Info, true);
+    }
+}

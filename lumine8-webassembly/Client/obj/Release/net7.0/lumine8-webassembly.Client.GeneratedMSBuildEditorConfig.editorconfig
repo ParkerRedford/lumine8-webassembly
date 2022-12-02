@@ -1,0 +1,241 @@
+is_global = true
+build_property.TargetFramework = net7.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = browser
+build_property.RootNamespace = lumine8-webassembly.Client
+build_property.RootNamespace = lumine8-webassembly.Client
+build_property.ProjectDir = C:\Users\Parker\Desktop\lumine8 projects\net7\New folder\lumine8-webassembly\lumine8-webassembly\Client\
+build_property.RazorLangVersion = 7.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\Parker\Desktop\lumine8 projects\net7\New folder\lumine8-webassembly\lumine8-webassembly\Client
+build_property._RazorSourceGeneratorDebug = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/AccountInfo.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxBY2NvdW50SW5mby5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/AccountLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxBY2NvdW50TGF5b3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/AccountNavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxBY2NvdW50TmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/ChangePassword.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxDaGFuZ2VQYXNzd29yZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/Manager.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxNYW5hZ2VyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/Profile.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxQcm9maWxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/ProfileRouting.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxQcm9maWxlUm91dGluZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Account/SetupDevice.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcQWNjb3VudFxTZXR1cERldmljZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/ForgotPassword.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcRm9yZ290UGFzc3dvcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Identity/Register.razor]
+build_metadata.AdditionalFiles.TargetPath = SWRlbnRpdHlcUmVnaXN0ZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/CryptoFund.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ3J5cHRvRnVuZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/Group.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcR3JvdXAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/GroupPictureCategory.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcR3JvdXBQaWN0dXJlQ2F0ZWdvcnkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/GroupPictureModal.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcR3JvdXBQaWN0dXJlTW9kYWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/GroupPPName.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcR3JvdXBQUE5hbWUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/MainGPP.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcTWFpbkdQUC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/Membership.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcTWVtYmVyc2hpcC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Group/Pictures.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBcUGljdHVyZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/PagePost.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUGFnZVBvc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Petitions.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUGV0aXRpb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/PictureModal.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUGljdHVyZU1vZGFsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/ChatPerson.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxDaGF0UGVyc29uLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/Introduction.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxJbnRyb2R1Y3Rpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/PictureCategory.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxQaWN0dXJlQ2F0ZWdvcnkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/Pictures.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxQaWN0dXJlcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/Profile.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxQcm9maWxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/Security.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxTZWN1cml0eS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Profile/TestEmail.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZmlsZVxUZXN0RW1haWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Search.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2VhcmNoLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Video/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVmlkZW9cSG9tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Video/UploadVideo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVmlkZW9cVXBsb2FkVmlkZW8ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Pages/Video/Video.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVmlkZW9cVmlkZW8ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/About.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEFib3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/EducationP.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEVkdWNhdGlvblAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/Interests.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEludGVyZXN0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/LoginDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXExvZ2luRGlzcGxheS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MainPP.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5QUC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MobileUI.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1vYmlsZVVJLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MyAlert.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE15QWxlcnQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MyButton.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE15QnV0dG9uLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MyDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE15RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MyDropdown.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE15RHJvcGRvd24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MyTooltip.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE15VG9vbHRpcC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/PlaceLived.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFBsYWNlTGl2ZWQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/Post.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFBvc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/PPName.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFBQTmFtZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/ProfilePicture.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFByb2ZpbGVQaWN0dXJlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/Replies.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFJlcGxpZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/Shares.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFNoYXJlcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/UserPost.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFVzZXJQb3N0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/Work.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFdvcmsucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-fbn9dj38yg
+
+[C:/Users/Parker/Desktop/lumine8 projects/net7/New folder/lumine8-webassembly/lumine8-webassembly/Client/Shared/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE5hdk1lbnUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-m8y08fmy90

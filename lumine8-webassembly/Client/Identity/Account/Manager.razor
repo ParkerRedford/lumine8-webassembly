@@ -1,0 +1,93 @@
+﻿@page "/Account/Manager"
+@layout AccountLayout
+
+<h3>Switch Accounts</h3>
+
+@inject lumine8.Client.Identity.AccountManager signInManager
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject ILocalStorageService localStorage
+
+<div>
+    <section>
+        <EditForm Model="loginUser" OnValidSubmit="SwitchAccount" style="background-color: initial;">
+            @if (!string.IsNullOrWhiteSpace(signInManager.Message))
+            {
+                <p class="text-danger">@signInManager.Message</p>
+            }
+
+            @if (users != null && users.Count() > 0)
+            {
+                <InputSelect @bind-Value="loginUser.Username" class="form-select">
+                    <option value="">Select</option>
+                    @foreach (var u in users)
+                    {
+                        <option value="@u.Username">@u.Username</option>
+                    }
+                </InputSelect>
+            }
+            else
+            {
+                <p>Please click <q>Add user to device</q> or <a href="/Register">register a new account</a>.</p>
+            }
+
+            <div>
+                <label for="password">Password</label>
+                <InputText @bind-Value="loginUser.Password" type="password" class="form-control" id="password"></InputText>
+            </div>
+
+            <button type="submit" class="btn btn-success-fill btnIndex" disabled="@disable">Switch</button>
+        </EditForm>
+
+        <div class="d-flex flex-column mt-5" style="text-align: end;">
+            <p>
+                <a href="/SetupDevice" class="orm-control">Add user to device</a>
+            </p>
+            <p>
+                <a href="/Register" class="orm-control">Register as a new user</a>
+            </p>
+        </div>
+    </section>
+
+    @if(authService.loginUser != null && !string.IsNullOrWhiteSpace(authService.loginUser.Username) && !string.IsNullOrWhiteSpace(authService.loginUser.PrivateKey))
+    {
+        <button type="button" @onclick="SignOut" class="btn btn-danger-fill d-flex ms-auto">Sign Out</button>
+    }
+</div>
+
+@code {
+    private LoginUser loginUser = new();
+
+    private bool disable = false;
+    private bool test = false;
+    private bool rememberMe = false;
+
+    private List<LoginUser> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await localStorage.GetItemAsync<List<LoginUser>>("Users");
+    }
+
+    private async Task SwitchAccount()
+    {
+        try
+        {
+            var sw = await signInManager.SwitchAccountAsync(loginUser);
+            if(sw)
+                navigationManager.NavigateTo("/", true);
+        }
+        catch (System.Exception ex)
+        {
+            
+        }
+    }
+
+    private async Task SignOut()
+    {
+        await signInManager.SignOut(authService.loginUser);
+
+        navigationManager.NavigateTo("/Register", true);
+    }
+}

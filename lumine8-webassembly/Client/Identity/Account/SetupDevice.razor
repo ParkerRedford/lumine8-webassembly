@@ -1,0 +1,78 @@
+﻿@page "/Account/SetupAccount"
+@layout AccountLayout
+
+@inject MainProto.MainProtoClient MainClient
+@inject lumine8.Client.Identity.AccountManager signInManager
+@inject NavigationManager NavigationManager
+
+<style>
+    h3 {
+        margin-top: 3rem;
+    }
+</style>
+
+<div class="mx-auto">
+    <h3>Setup Device</h3>
+
+    <p>You can provide your private key or your 24 mnemonic key word with your password</p>
+
+    <label for="username">Username (Required)</label>
+    <input type="text" id="username" @bind-value="loginUser.Username" class="form-control" />
+
+    <h3>Option 1</h3>
+    <label for="password">Password</label>
+    <input type="password" id="password" @bind-value="loginUser.Password" class="form-control" />
+
+    <label for="mnemonic">Mnemonic</label>
+    <input type="text" id="mnemonic" @bind-value="loginUser.Mnemonic" class="form-control" />
+    <p>Seperate with spaces</p>
+
+    <h3>Option 2</h3>
+
+    <label for="privatekey">Private Key</label>
+    <input type="text" id="privatekey" @bind-value="loginUser.PrivateKey" class="form-control" />
+    <p>May take a moment to generate the private key if using Option 1 only</p>
+
+    <input type="button" @onclick="Authenticate" value="Setup device" class="btn btn-success mt-5 ms-auto" />
+</div>
+
+<MyDialog @ref="dia">
+    <Content>
+        <p>It appears the credentials you entered does not match the key pair in the database.</p>
+    </Content>
+</MyDialog>
+
+@code {
+    LoginUser loginUser = new();
+    string mnemonic = string.Empty;
+
+    MyDialog? dia = new();
+
+    private async Task Authenticate()
+    {
+        try
+        {
+            if(string.IsNullOrWhiteSpace(loginUser.PrivateKey))
+            {
+                var wallet = new Nethereum.HdWallet.Wallet(new Mnemonic(loginUser.Mnemonic).ToString(), loginUser.Password);
+                var acc = wallet.GetAccount(0);
+
+                loginUser.PrivateKey = acc.PrivateKey;
+            }
+
+            Console.WriteLine(loginUser);
+            var auth = await MainClient.AuthenticateAsync(loginUser);
+            Console.WriteLine(auth.IsAuthenticated);
+            if (auth.IsAuthenticated)
+            {
+                await signInManager.SignInAsync(loginUser);
+                NavigationManager.NavigateTo("/home");
+            }
+        }
+        catch(System.Exception ex)
+        {
+            dia.Title = "Error";
+            await dia.InvokeDisplay();
+        }
+    }
+}

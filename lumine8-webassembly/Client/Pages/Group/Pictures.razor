@@ -1,0 +1,327 @@
+﻿@page "/g/p/{GroupId}"
+
+@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@using System.IO
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    .pictures:hover {
+        cursor: pointer;
+    }
+
+    .imgRow {
+        border-radius: 1rem;
+    }
+</style>
+
+@if(!variables.isDesktop)
+{
+    <style>
+        .imgRow img {
+            width: 8rem !important;
+        }
+
+        li {
+            width: max-content;
+        }
+
+        .body {
+            margin: auto 0 !important;
+        }
+
+        #closeModal {
+            top: 140px;
+            margin-left: 1rem !important;
+        }
+    </style>
+}
+
+<MyAlert @ref="alert"></MyAlert>
+
+@if (render)
+{
+    <nav id="nav" class="w-auto m-auto">
+        <ul class="pagination m-2 d-flex flex-row flex-wrap">
+            <li class="page-item m-2">
+                <a href="g/@(GroupId)" class="m-auto page-link">Group Page</a>
+            </li>
+            <li class="page-item m-2">
+                <a href="g/m/@(GroupId)" class="m-auto page-link">Membership</a>
+            </li>
+            <li class="page-item m-2">
+                <a href="g/p/@(GroupId)" class="m-auto page-link active">Pictures</a>
+            </li>
+        </ul>
+    </nav>
+
+    <a href="/g/@(model.Group.GroupId)">Group: @(model.Group.Name)</a>
+
+    <div class="justify-content-center">
+        <div class="w-100" style="width: max-content; max-width: inherit;">
+            @if (images.Count() > 0 && model.SignedInUserRole.RoleType >= model.SectionRoles.Pictures)
+            {
+                int i = 0;
+                foreach (var c in categories)
+                {
+                    if (category != null)
+                    {
+                        var j = i;
+                        <div class="border mt-3" style="border-radius: 1rem; height: max-content; background-color: white;">
+                            <div class="card-header d-flex flex-row">
+                                <h3 class="d-flex flex-row m-0 p-0 w-100">
+                                    @if (categoryEdits[c])
+                                    {
+                                        <input type="text" @bind-value="editCat[c]" class="form-control h-auto" style="width: initial;" />
+                                        <input type="button" @onclick="ChangeCategory" value="Change" class="btn btn-success" />
+
+                                        async Task ChangeCategory()
+                                        {
+                                            if (editCat[c] != "Profile Pictures")
+                                            {
+                                                var cc = await MainClient.ChangeGroupCategoriesAsync(new ChangeGroupCategoriesRequest { GroupId = GroupId, From = c, To = editCat[c] });
+                                                categories.Add(editCat[cc.To]);
+                                                categoryEdits.Add(editCat[cc.To], false);
+
+                                                foreach (var i in images.Where(x => x.Category == cc.From))
+                                                    i.Category = cc.To;
+
+                                                editCat.Remove(cc.From);
+                                                categories.Remove(cc.From);
+                                            }
+                                            else
+                                            {
+                                                alert.InvokeAlert("Can't change category \"Profile Pictures\" here", MyAlert.Alerts.Warning);
+                                                StateHasChanged();
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-row" style="font-size: 16pt;">
+                                            <a class="p-0 my-auto" href="/g/p/@(GroupId)/c/@(c)">@c</a>
+                                            <p class="arrow my-auto ms-3" @onclick="IndexDown">⮜</p>
+                                            <p class="arrow my-auto ms-3" @onclick="IndexUp">⮞</p>
+                                            <p class="my-auto ms-2">@(indexes[j] + 1) - @(indexes[j] + 4) of @(images.Where(x => x.Category == c).Count())</p>
+                                        </div>
+                                        void IndexDown()
+                                        {
+                                            indexes[j]--;
+                                            if (indexes[j] < 0)
+                                                indexes[j] = 0;
+                                        }
+                                        void IndexUp()
+                                        {
+                                            if (indexes[j] + 4 < images.Where(x => x.Category == c).Count())
+                                                indexes[j]++;
+                                        }
+                                    }
+                                    @if (model.SignedInUserRole.RoleType >= model.SectionRoles.RemovePictures)
+                                    {
+                                        if (categoryEdits[c])
+                                        {
+                                            if (model.SignedInUserRole.RoleType >= model.SectionRoles.PostLumine)
+                                            {
+                                                <EditForm Model="messages[j]" OnValidSubmit="CreatePostByCategory" class="d-flex flex-row ms-auto">
+                                                    <InputText @bind-Value="messages[j].MessageString" class="form-control" placeholder="Message" style="height: auto;"></InputText>
+                                                    <input type="submit" class="btn btn-success mx-1" value="Post" />
+                                                </EditForm>
+                                            }
+
+                                            <button class="btn btn-danger ms-auto" @onclick="() => categoryEdits[c] = false">
+                                                <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task CreatePostByCategory()
+                                            {
+                                                var cp = await MainClient.CreateGroupPostByCategoryAsync(new CreateGroupPostByCategoryRequest { GroupId = GroupId, Category = c, Message = messages[j] });
+                                                alert.InvokeAlert($"Post was created from category {cp.Category}", MyAlert.Alerts.Success, true);
+                                                categoryEdits[cp.Category] = false;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-info ms-auto" @onclick="() => categoryEdits[c] = true">
+                                                <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                            </button>
+                                        }
+                                    }
+                                </h3>
+                            </div>
+
+                            <div class="d-flex flex-row overflow-auto flex-wrap justify-content-around pb-2" style="max-width: inherit;">
+                                @foreach (var img in images.Where(x => x.Category == c).Skip(indexes[j]).Take(4))
+                                {
+                                    <div class="border w-auto imgRow d-flex flex-column mt-2 p-2">
+                                        @if (categoryEdits[c])
+                                        {
+                                            <button type="button" class="btn btn-danger" @onclick="RemovePicture">
+                                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task RemovePicture()
+                                            {
+                                                if (img.Category == "Profile Pictures")
+                                                {
+                                                    alert.InvokeAlert("Go to Upload Pictures to delete pictures from \"Profile Pictures\"", MyAlert.Alerts.Warning);
+                                                    return;
+                                                }
+
+                                                images.Remove(await MainClient.DeleteGroupImageAsync(img));
+                                            }
+                                        }
+                                        <img @onclick="() => imageModal = img" class="pictures" style="width: 10rem;" src="@variables.uri/p/g/@(GroupId)/@(img.FileName)" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    i++;
+                }
+            }
+        </div>
+    </div>
+
+    @if (model.SignedInUserRole.RoleType >= model.SectionRoles.UploadPictures && model.SectionRoles.UpdatePictures >= RoleType.NoRole)
+    {
+        <div id="divPad"></div>
+
+        <div id="info" class="p-2 m-2" style="width: max-content; position: fixed; bottom: 0; right: 0; border: 1px solid #655876; background-color: white; border-radius: 1rem; height: min-content;">
+            <div>
+                @foreach (var c in images.Select(x => x.Category).Distinct())
+                {
+                    <button @onclick="() => category = c" class="btn btn-info m-2" style="height: max-content;">@c</button>
+                }
+            </div>
+
+            <EditForm Model="category" OnValidSubmit="UploadPictures" class="d-flex flex-column m-2">
+                <input @bind-value="category" type="text" class="form-control mb-1" placeholder="Category" />
+                <InputFile OnChange="Upload" accept="image/*" class="my-2" multiple required></InputFile>
+
+                <input style="width: max-content;" class="btn btn-success ms-auto" type="submit" value="Upload picture(s)" />
+            </EditForm>
+        </div>
+
+
+        async Task UploadPictures()
+        {
+            if (category == "Profile Pictures")
+            {
+                alert.InvokeAlert("Unable to upload \"Profile Pictures\" here", MyAlert.Alerts.Danger);
+                return;
+            }
+            try
+            {
+                var files = new MultipartFormDataContent();
+
+                foreach (var f in selectedFiles)
+                {
+                    Stream stream = f.OpenReadStream(1024 * 1024 * 1024);
+                    MemoryStream ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+
+                    files.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", f.Name);
+                }
+
+                var ugp = await Http.PostAsync($"api/g/UploadPictures/{GroupId}/{category}", files);
+                if(ugp.IsSuccessStatusCode)
+                {
+                    var imgs = await ugp.Content.ReadFromJsonAsync<List<GroupImage>>();
+
+                    selectedFiles.Clear();
+                    this.images.AddRange(imgs);
+
+                    var ic = images.Select(x => x.Category).FirstOrDefault();
+                    var c = categoryEdits.Where(x => x.Key == ic).FirstOrDefault();
+                    if (c.Key == null)
+                        categoryEdits.Add(ic, false);
+
+                    categories.Add(ic);
+                    categories = categories.Distinct().ToList();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                alert.InvokeAlert("Error uploading files", MyAlert.Alerts.Info);
+            }
+        }
+    }
+
+    @if (imageModal != null)
+    {
+        <GroupPictureModal image="imageModal" group="model.Group" OnClick="() => imageModal = null"></GroupPictureModal>
+    }
+}
+
+@code {
+    [Parameter] public string GroupId { get; set; }
+
+    private bool render = false;
+
+    private MyAlert alert;
+
+    private SharedUser owner;
+
+    private List<Role> roles = new();
+
+    private IDictionary<string, bool> categoryEdits = new Dictionary<string, bool>();
+
+    private IList<Message> messages = new List<Message>();
+    private List<GroupImage> images = new List<GroupImage>();
+    private GroupImage imageModal;
+
+    private List<IBrowserFile> selectedFiles = new List<IBrowserFile>();
+    private IList<int> indexes = new List<int>();
+
+    private IDictionary<string, string> editCat = new Dictionary<string, string>();
+    private IList<string> categories = new List<string>();
+
+    private string category = "";
+    GroupPicturesPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("Username"))
+                Http.DefaultRequestHeaders.Add("Username", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("PrivateKey"))
+                Http.DefaultRequestHeaders.Add("PrivateKey", authService.loginUser.PrivateKey);
+        }
+
+        var model = await MainClient.GetGroupPicturesPageModelAsync(new GroupId { GroupId_ = GroupId }, authService.headers);
+        if (model.Banned)
+            navigationManager.NavigateTo("404");
+
+        roles = model.Roles.ToList();
+        images = model.Images.ToList();
+
+        foreach (var b in images.Select(x => x.Category).Distinct())
+        {
+            categoryEdits.Add(b, false);
+            messages.Add(new Message { SenderId = model.SignedInUser.Id, MessageString = "" });
+            indexes.Add(0);
+        }
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 Pictures - Group: {model.Group.Name}");
+            await JSRuntime.InvokeVoidAsync("setDivHeight");
+        }
+    }
+
+    private void Upload(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles().ToList();
+    }
+}

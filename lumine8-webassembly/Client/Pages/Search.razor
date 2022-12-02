@@ -1,0 +1,506 @@
+﻿@page "/search"
+
+@inject MainProto.MainProtoClient MainClient
+
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject EnumToString enumConverter
+@inject IJSRuntime JSRuntime
+
+
+<style>
+    .field {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid black;
+        padding: 1.5rem;
+    }
+
+    .myalert {
+        display: none !important;
+    }
+
+    .u-card:hover {
+        border: 3px dotted #494055;
+    }
+
+    img {
+        border-radius: 0 0 1rem 1rem;
+    }
+
+    fieldset {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .person {
+        width: max-content;
+        margin: 1rem !important;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <style>
+        .person {
+            width: 100% !important;
+        }
+
+            .person div a {
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+            }
+
+            .person div {
+                width: 100% !important;
+            }
+
+            .person img {
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+        #form {
+            margin: auto;
+        }
+
+        #feed {
+            position: initial;
+            margin: auto;
+        }
+    </style>
+}
+
+@if (render)
+{
+    <div class="d-flex flex-row">
+        <input type="radio" name="tag" checked="@(searchMode == 0)" @onchange="() => { searchMode = 0; }" class="my-auto me-1" id="RPeople" />
+        <label for="RPeople" class="me-3">People</label>
+
+        <input type="radio" name="tag" checked="@(searchMode == 1)" @onchange="() => { SearchGroups(); searchMode = 1; }" class="my-auto me-1" id="RGroups" />
+        <label for="RGroups">Groups</label>
+    </div>
+    <main class="w-100 my-2 mx-auto" style="display: flex;" role="main" id="main">
+        <MobileUI @ref="mobileUI">
+            <Settings>
+                @if (searchMode == 0)
+                {
+                    <div class="d-flex">
+                        <EditForm Model="search" OnValidSubmit="FSearch" class="position-sticky w-100" style="flex-direction: column; background-color: initial !important;" id="feed">
+                            <div style="background-color: initial !important; overflow: auto;">
+                                <fieldset class="field">
+                                    <legend>Name</legend>
+
+                                    <label class="my-auto" for="name">Name</label>
+                                    <InputText class="form-control" @bind-Value="search.Name" id="name"></InputText>
+                                </fieldset>
+
+                                <fieldset class="field">
+                                    <legend>About</legend>
+
+                                    <div class="d-flex flex-row ms-auto">
+                                        <label for="fAbout" class="my-auto me-1">Filter</label>
+                                        <input type="checkbox" checked="@bAbout" @onchange="() => bAbout = !bAbout" class="my-auto" id="fAbout" />
+                                    </div>
+
+                                    <label for="sex">Sex</label>
+                                    <InputSelect @bind-Value="search.About.Sex" class="form-select" id="sex" style="width: max-content;">
+                                        @foreach (var sex in System.Enum.GetValues(typeof(Sex)))
+                                        {
+                                    <option value="@sex">@sex</option>
+                                        }
+                            </InputSelect>
+
+                            <label for="relationship">Relationship</label>
+                            <InputSelect @bind-Value="search.About.MartialStatus" class="form-select" id="relationship" style="width: max-content;">
+                                @foreach (var re in System.Enum.GetValues(typeof(lumine8_GrpcService.Status)))
+                                        {
+                                    <option value=@re>@enumConverter.ToStatus((lumine8_GrpcService.Status)re)</option>
+                                    @*<option value="@re">@status.displayMartial((lumine8.Shared.Main.Status)re)</option>*@
+                                        }
+                            </InputSelect>
+                        </fieldset>
+
+                        @*<fieldset class="field">
+                        <legend class="d-flex">
+                        <span>Places Lived </span>
+                        <RadzenIcon Icon="home" Style="display: flex !important;" />
+                        </legend>
+
+                        <div class="d-flex flex-row ms-auto">
+                        <label for="fPlace" class="my-auto me-1">Filter</label>
+                        <input type="checkbox" class="my-auto" checked="@bPlace" @onchange="() => bPlace = !bPlace" id="fPlace" />
+                        </div>
+
+                        <label for="pCountry">Country</label>
+                        <InputSelect @bind-Value="search.Live.Country" id="pCountry" class="form-select" style="width: max-content;">
+                        @foreach (var c in System.Enum.GetValues(typeof(lumine8.Shared.Models.Personal.Countries)))
+                        {
+                        <option value="@c">@(country.displayCountry((lumine8.Shared.Models.Personal.Countries)c))</option>
+                        }
+                        </InputSelect>
+
+                        <label for="pState">State</label>
+                        <InputText class="form-control" @bind-Value="search.Live.State" id="pState"></InputText>
+
+                        <label for="pCity">City</label>
+                        <InputText class="form-control" @bind-Value="search.Live.City" id="pCity"></InputText>
+
+                        <label for="pPostal">Postal Code</label>
+                        <InputText class="form-control" @bind-Value="search.Live.PostalCode" id="pPostal"></InputText>
+                        </fieldset>*@
+
+                        <fieldset class="field">
+                            <legend class="d-flex">
+                                <span class="d-flex">Education </span>
+                                <RadzenIcon Icon="school" Style="display: flex !important;" />
+                            </legend>
+
+                            <div class="d-flex flex-row ms-auto">
+                                <label for="fEducation" class="my-auto me-1">Filter</label>
+                                <input type="checkbox" class="my-auto" checked="@bEducation" @onchange="() => bEducation = !bEducation" id="fEducation" />
+                            </div>
+
+                            <label for="eName">School Name</label>
+                            <InputText class="form-control" @bind-Value="search.Education.SchoolName" id="eName"></InputText>
+
+                            <label for="eDegree">Degree</label>
+                            <InputSelect @bind-Value="search.Education.Degree" id="eDegree" class="form-select" style="width: max-content;">
+                                @foreach (var c in System.Enum.GetValues(typeof(Level)))
+                                        {
+                                    <option value="@c">@enumConverter.ToLevel((Level)c)</option>
+                                        }
+                            </InputSelect>
+
+                            <label for="eMajor">Major</label>
+                            <InputText class="form-control" @bind-Value="search.Education.Major" id="eMajor"></InputText>
+
+                            <label for="eMinor">Minor</label>
+                            <InputText class="form-control" @bind-Value="search.Education.Minor" id="eMinor"></InputText>
+                        </fieldset>
+
+                        <fieldset class="field">
+                            <legend class="d-flex">
+                                <span class="d-flex">Interests </span>
+                                <RadzenIcon Icon="group_work" Style="display: flex !important;" />
+                            </legend>
+
+                            <div class="d-flex flex-row ms-auto mb-4">
+                                <label for="fInterest" class="my-auto me-1">Filter</label>
+                                <input type="checkbox" class="my-auto" checked="@bInterest" @onchange="() => bInterest = !bInterest" id="fInterest" />
+                            </div>
+
+                            <div style="position: relative;">
+                                @if (fInterests.Count() > 0)
+                                        {
+                                            <div style="position: absolute; background-color: white; flex-direction: column; bottom: 100%; border: 1px solid lightgrey;">
+                                                @foreach (var i in fInterests.Select(x => x.InterestName).Distinct())
+                                                {
+                                                    <input @onclick="Add" type="button" class="btn btn-success-fill m-2" value="@i" />
+
+                                                    void Add()
+                                                    {
+                                                        interests.Add(new Interest { InterestName = i });
+                                                    }
+                                                }
+                                            </div>
+                                        }
+
+                                        <div class="d-flex flex-row">
+                                            <input type="text" class="form-control h-auto" @bind-value="interest" @oninput="async (EventArgs) => await StartWatch(EventArgs.Value.ToString())" placeholder="Add Interest" />
+                                            <button type="button" @onclick="AddInterest" class="btn btn-success-fill">
+                                                <RadzenIcon Icon="add" Style="display: flex !important" />
+                                            </button>
+                                        </div>
+
+                                        <span>@string.Format("{0:N1}", ts.TotalSeconds)</span>
+                                    </div>
+
+                                    <div class="d-flex flex-row">
+                                        @foreach (var i in interests)
+                                        {
+                                            <input type="button" @onclick="DeleteInterest" class="btn btn-danger-fill m-2" value="@i.InterestName" style="width: min-content;" />
+
+                                            void DeleteInterest()
+                                            {
+                                                interests.Remove(i);
+                                            }
+                                        }
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <input type="submit" class="btn btn-success-fill" style="width: 100%" value="Submit" />
+                        </EditForm>
+                    </div>
+                }
+                else if (searchMode == 1)
+                {
+                    <div class="d-flex flex-column myform p-2" style="border-radius: 1rem; height: max-content;">
+                        <label for="GroupName">Group Name</label>
+                        <input type="text" @bind-value="groupName" class="form-control" id="GroupName" />
+
+                        <label for="GroupJoin">Join security</label>
+                        <select @bind="join" class="form-select" id="GroupJoin" style="width: max-content;">
+                            @foreach (var j in System.Enum.GetValues(typeof(Join)))
+                            {
+                                <option value="@j">@j</option>
+                            }
+                        </select>
+
+                        <label for="TagName">Tags</label>
+                        <div class="d-flex">
+                            <input type="text" @bind-value="tagName" class="form-control h-auto" id="TagName" />
+                            <button type="button" @onclick="AddTag" class="btn btn-success-fill">
+                                <RadzenIcon Icon="add" Style="display: flex !important;" />
+                            </button>
+                        </div>
+
+                        <div class="d-flex flex-row text-left flex-wrap" style="max-width: fit-content;">
+                            @foreach (var t in groupTags)
+                            {
+                                <button type="button" class="btn btn-danger-fill m-1" @onclick="RemoveTag">@(t)</button>
+
+                                void RemoveTag()
+                                {
+                                    groupTags.Remove(t);
+                                }
+                            }
+                        </div>
+
+                        <button type="button" @onclick="SearchGroups" class="btn btn-success-fill">
+                            <img src="/bootstrap-icons-1.9.0/circ" />
+                            <RadzenIcon Icon="search" Style="display: flex !important;" />
+                        </button>
+                    </div>
+
+                    void AddTag()
+                    {
+                        if (!string.IsNullOrWhiteSpace(tagName) && groupTags.Where(x => x.ToLower() == tagName.ToLower()).FirstOrDefault() == null)
+                            groupTags.Add(tagName);
+
+                        tagName = "";
+                    }
+                }
+            </Settings>
+            <Feed>
+                @if (searchMode == 0)
+                {
+                    <div class="d-flex mx-auto flex-wrap w-100 justify-content-center" style="height: max-content;">
+                        @if (!(model.Users.Count() > 0))
+                        {
+                            <p class="mx-auto">No search results</p>
+                        }
+                        else
+                        {
+                            foreach (var u in model.Users)
+                            {
+                                var pp = model.ProfilePictures.Where(x => x.UserId == u.Id).FirstOrDefault();
+
+                                <div class="card border m-3 person" style="height: min-content;">
+                                    <a class="card-title m-0 p-0 w-100 u-card" style="border-radius: 1rem !important; max-width: 100%; text-decoration: none; margin: auto !important; text-align: center;" href="/u/@u.Username">@u.Name</a>
+
+                                    <div class="d-flex flex-row" style="width: 196px;">
+                                        @if (pp == null)
+                                        {
+                                            <a style="width: 196px; height: 196px;" href="/u/@u.Username">
+                                                <img style="width: 196px; height: 196px;" src="/p/No_image_available.svg" />
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            var img = model.Images.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+                                            <a href="/u/@u.Username">
+                                                <img style="width: 196px; height: 196px;" src="@variables.uri/p/u/@u.Id/@img.FileName" />
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else if (searchMode == 1)
+                {
+                    <div class="d-flex mx-auto flex-wrap w-100 justify-content-center" style="height: max-content;">
+                        @foreach (var g in model.Groups)
+                        {
+                            var pp = model.GroupProfilePictures.Where(x => x.GroupId == g.GroupId).FirstOrDefault();
+                            GroupImage img = new();
+
+                            if (pp != null && !string.IsNullOrWhiteSpace(pp.ImageId))
+                            {
+                                img = model.GroupImages.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+                            }
+
+                            if (string.IsNullOrWhiteSpace(g.Name))
+                            {
+                                g.Name = string.Empty;
+                            }
+
+                            <div class="card border person" style="height: min-content;">
+                                <a class="card-title m-0 p-0 w-100 u-card" style="border-radius: 1rem !important; max-width: 100%; color: black; text-decoration: none; margin: auto !important; text-align: center;" href="/g/@g.GroupId">@g.Name</a>
+
+                                <div class="d-flex flex-row" style="width: 196px;">
+                                    @if (string.IsNullOrWhiteSpace(img?.ImageId))
+                                    {
+                                        <a style="width: 196px; height: 196px;" href="/g/@g.GroupId">
+                                            <img style="width: 196px; height: 196px;" src="/p/No_image_available.svg" />
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="/g/@g.GroupId">
+                                            <img style="width: 196px; height: 196px;" src="@variables.uri/p/g/@(g.GroupId)/@(img.FileName)" />
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </Feed>
+        </MobileUI>
+    </main>
+}
+
+@code {
+    private bool render = false;
+    private MobileUI mobileUI;
+
+    private int searchMode = 0;
+
+    private bool bAbout = false, bPlace = false, bEducation = false, bInterest = false;
+
+    private SearchModel search = new SearchModel
+        {
+            About = new lumine8_GrpcService.About(),
+            Education = new Education(),
+            Live = new Lived()
+        };
+
+    private SearchPageModel model = new();
+
+    private List<Interest> interests = new();
+    private List<Interest> fInterests = new();
+    private string interest = "";
+
+    private Stopwatch watch = new Stopwatch();
+    private TimeSpan ts;
+
+    private string groupName = "", tagName = "";
+    private IList<string> groupTags = new List<string>();
+    private Join join = Join.Anonymous;
+
+    private async Task StartWatch(string value)
+    {
+        watch.Stop();
+        watch.Reset();
+        watch.Start();
+
+        bool b = true;
+        while (b)
+        {
+            ts = watch.Elapsed;
+
+            await Task.Delay(100);
+            StateHasChanged();
+
+            if (ts.TotalSeconds >= 1)
+                b = false;
+        }
+
+        watch.Stop();
+        watch.Reset();
+        StateHasChanged();
+        await FindInterests(value);
+    }
+
+    private async Task FindInterests(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            fInterests = new List<Interest>();
+        else
+        {
+            var ri = await MainClient.GetInterestsAsync(new Id { Id_ = value });
+            fInterests = ri.Interests.ToList();
+        }
+    }
+
+    private void AddInterest()
+    {
+        interests.Add(new Interest { InterestName = interest, UserId = model.SignedInUser.Id });
+        interest = "";
+    }
+
+    private async Task FSearch()
+    {
+        if (string.IsNullOrWhiteSpace(search.Name))
+            search.Name = "";
+
+        var searchModel = new SearchModel
+            {
+                Name = search.Name,
+                About = search.About,
+                Live = search.Live,
+                Education = search.Education,
+                SignedInUser = model.SignedInUser,
+                BAbout = bAbout,
+                BEducation = bEducation,
+                BInterest = bInterest,
+                BPlace = bPlace
+            };
+        searchModel.Interests.AddRange(interests.ToList());
+
+        var searched = await MainClient.GetSearchModelAsync(searchModel);
+        model.Users.Clear();
+        model.Users.AddRange(searched.Users);
+
+        model.ProfilePictures.Clear();
+        model.ProfilePictures.AddRange(searched.ProfilePictures);
+
+        model.Images.Clear();
+        model.Images.AddRange(searched.Images);
+        mobileUI.FeedIndex();
+    }
+
+    private async void SearchGroups()
+    {
+        var m = new SearchGroupModel { Join = join, Name = groupName };
+        m.Tags.AddRange(groupTags);
+        var mSearch = await MainClient.GetSearchGroupAsync(m);
+
+        model.Groups.Clear();
+        model.Groups.AddRange(mSearch.Groups);
+
+        model.GroupImages.Clear();
+        model.GroupImages.AddRange(mSearch.Images);
+
+        model.GroupProfilePictures.Clear();
+        model.GroupProfilePictures.AddRange(mSearch.GroupProfilePictures);
+
+        mobileUI.FeedIndex();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetSearchPageModelAsync(new Empty(), authService.headers);
+
+        if (model.SignedInUser == null)
+            model.SignedInUser = new SharedUser();
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("windowLoad");
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 - Search");
+        }
+    }
+}

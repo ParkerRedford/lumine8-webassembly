@@ -1,0 +1,9 @@
+.vs/
+lumine8-webassembly/Client/bin
+lumine8-webassembly/Client/obj
+
+lumine8-webassembly/Server/bin
+lumine8-webassembly/Server/obj
+
+lumine8-webassembly/Shared/bin
+lumine8-webassembly/Shared/obj

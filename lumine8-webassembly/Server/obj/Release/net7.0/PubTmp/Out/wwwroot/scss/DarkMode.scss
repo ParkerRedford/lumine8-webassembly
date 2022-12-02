@@ -1,0 +1,246 @@
+﻿@import "Core";
+
+$success: #7dd42a;
+$danger: #cc1c1cad;
+$info: #82c1ff;
+$hover: wheat;
+
+$mainColor: #404040;
+$midColor: #303030;
+$secColor: #202020;
+$defaultColor: grey;
+$select: #606060;
+
+/*.youchat {
+    background-color: lightpink;
+}*/
+
+.otherchat {
+    background-color: #505050;
+}
+
+p, label, summary, details, h3, span, input[type=file], .nav-link {
+    color: white !important;
+}
+
+html, #app {
+    background-color: #181818 !important;
+}
+
+body, html, .dropdown, .input-group-text, form {
+    background-color: #242027;
+}
+
+hr {
+    background-color: grey;
+}
+
+h5, #nav {
+    background-color: #93859e;
+}
+
+header, nav {
+    border: none !important;
+}
+
+header nav, .navColor {
+    background-color: $mainColor !important;
+}
+
+nav ul li a {
+    background-color: initial !important;
+}
+
+.card,
+form,
+.like,
+.rz-html-editor-toolbar,
+.rz-html-editor-button,
+.rz-html-editor-content,
+.rz-html-editor-colorpicker,
+.rz-html-editor-colorpicker,
+.rz-colorpicker,
+.rz-colorpicker-trigger,
+.rz-dialog,
+.rz-state-active,
+.rz-tabview-panel,
+.mydropdown, .list-group-item, .mydialogform,
+.rz-tabview, .rz-tabview-nav, .rz-tabview-nav li a {
+    background-color: $midColor !important;
+    color: white !important;
+}
+
+.rz-tabview-selected a {
+    background-color: #606060 !important;
+}
+
+.rz-html-editor-button, .rz-html-editor-colorpicker, .rz-colorpicker-trigger, .rz-colorpicker, .rz-html-editor-toolbar {
+    border-radius: 1rem !important;
+}
+    /*
+.rz-html-editor, .rz-html-editor-content, .rz-html-editor-toolbar, .card-header {
+    background-color: #c9bdd82b !important;
+}*/
+
+.mychatbox {
+    background-color: $secColor !important;
+
+    &-chat {
+        background-color: $secColor !important;
+    }
+}
+
+.mydropdown {
+    box-shadow: 0 0 6px white;
+}
+
+.card-header {
+    background-color: #8c7f96;
+}
+
+.form-select, .form-control {
+    color: white;
+    background-color: $select;
+}
+
+.form-control::placeholder {
+    color: darkseagreen;
+}
+
+form {
+    background-color: initial !important;
+}
+
+form .card .card-header, .form-group, .field {
+    color: white;
+    background-color: $midColor;
+}
+
+.name, .name p {
+    background-color: #afacb5 !important;
+    color: black !important;
+}
+
+h5 {
+    color: black;
+}
+
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    color: black;
+    text-align: center;
+    vertical-align: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: .375rem .75rem;
+    line-height: 1.5;
+    border-radius: .25rem;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+
+    &:hover {
+        color: lightgrey;
+    }
+
+    &-link {
+        text-decoration: none;
+        color: #0071c1;
+    }
+
+    &-primary {
+        color: $defaultColor;
+
+        &-fill {
+            background-color: #937FAF;
+            border: none !important;
+            box-shadow: none !important;
+
+            &:hover {
+                color: $hover;
+            }
+        }
+
+        &:hover {
+            box-shadow: 0 0 12px #655876;
+        }
+    }
+
+    &-info {
+        color: $defaultColor;
+
+        &-fill {
+            background-color: $info !important;
+            border: none !important;
+            box-shadow: none !important;
+
+            &:hover {
+                color: $hover;
+            }
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $info;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+
+    &-success {
+        color: $defaultColor;
+
+        &-fill {
+            background-color: $success !important;
+            border: none !important;
+            box-shadow: none !important;
+
+            &:hover {
+                color: $hover;
+            }
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $success;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+
+    &-danger {
+        color: $defaultColor;
+
+        &-fill {
+            background-color: $danger !important;
+            border: none !important;
+            box-shadow: none !important;
+
+            &:hover {
+                color: $hover;
+            }
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $danger;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+}

@@ -1,0 +1,313 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+
+@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+@inject AuthenticationService authService
+
+@inject SingletonVariables variables
+@implements IDisposable
+
+<style>
+    .reply:hover {
+        cursor: pointer;
+    }
+</style>
+
+@if (render)
+{
+    <div class="ms-2">
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-column">
+                <div class="d-flex flex-row">
+                    <div class="mt-1" style="width: max-content;">
+                        <PPName UserId="@model.User.Id"></PPName>
+                    </div>
+                </div>
+                <p class="my-auto" style="white-space: nowrap; color: grey;">@time</p>
+            </div>
+
+            <div class="d-flex flex-column ms-auto">
+                @if (!string.IsNullOrWhiteSpace(signedInUser.Id))
+                {
+                    <div class="d-flex flex-row">
+                        <div class="d-flex flex-row ms-auto" style="width: max-content;">
+                            @if (model.Like == null && string.IsNullOrWhiteSpace(model.Like?.LikeId))
+                            {
+                                <button type="button" @onclick="Like" class="d-flex flex-row" style="background-color: initial; border: none;">
+                                    <img src="/icons/thumpsup.png" class="w-auto my-auto" style="height: 1.5rem;" />
+                                    <p class="my-auto mx-2" style="font-size: 16pt;">@model.Likes.Count()</p>
+                                </button>
+                                async Task Like()
+                                {
+                                    model.Like = new Like { MessageId = message.MessageId, UserId = signedInUser.Id };
+
+                                    await hubConnection.SendAsync("Like", model.Like);
+                                }
+                            }
+                            else
+                            {
+                                <button @onclick="UnLike" class="d-flex flex-row me-1" style="background-color: #937faf00; border-radius: 2rem; border: 1px solid black;">
+                                    <img src="/icons/thumpsup.png" class="w-auto my-auto" style="height: 1.5rem;" />
+                                    <p class="my-auto mx-2" style="font-size: 16pt;">@model.Likes.Count()</p>
+                                </button>
+                                void UnLike()
+                                {
+                                    hubConnection.SendAsync("UnLike", model.Like);
+                                    model.Like = null;
+                                }
+                            }
+                        </div>
+
+                        @if(message.SenderId == signedInUser.Id)
+                        {
+                            <button type="button" @onclick="() => dEdit = !dEdit" class="btn ms-auto me-1 py-0 px-1" style="height: max-content;">
+                                <RadzenIcon Icon="edit" Style="display: flex !important;"></RadzenIcon>
+                            </button>
+
+                            <EditForm Model="message" OnValidSubmit="DeleteMessage" style="background-color: initial;">
+                                <button class="btn m-auto" style="padding: 0.3rem 0.5rem;" type="submit">
+                                    <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                </button>
+                            </EditForm>
+
+                            async Task DeleteMessage()
+                            {
+                                await hubConnection.SendAsync("RemoveReply", message);
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-row me-1" style="background-color: #937faf00; border-radius: 2rem;">
+                        <img src="/icons/thumpsup.png" class="w-auto my-auto" style="height: 1.5rem;" />
+                        <p class="my-auto mx-2" style="font-size: 16pt;">@model.Likes.Count()</p>
+                    </div>
+                }
+
+                @if (model.Messages.Count() > 0)
+                {
+                    <p @onclick="() => showReplies = !showReplies" class="btn-link reply my-auto ms-auto">View @model.Messages.Count() replies</p>
+                }
+            </div>
+        </div>
+
+        <hr class="mt-0" />
+
+        @if (dEdit)
+        {
+            <EditForm Model="message" OnValidSubmit="Edit" style="z-index: 1;">
+                <RadzenHtmlEditor @bind-Value="message.MessageString" Placeholder="Write a comment..." Style="background-color: white;">
+                    <RadzenHtmlEditorUndo />
+                    <RadzenHtmlEditorRedo />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorBold />
+                    <RadzenHtmlEditorItalic />
+                    <RadzenHtmlEditorUnderline />
+                    <RadzenHtmlEditorStrikeThrough />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorColor />
+                    <RadzenHtmlEditorBackground />
+                    <RadzenHtmlEditorRemoveFormat />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorLink />
+                    <RadzenHtmlEditorUnlink />
+                </RadzenHtmlEditor>
+
+                <div class="d-flex flex-row my-2">
+                    <div class="d-flex flex-row ms-auto">
+                        <button type="button" @onclick="() => dEdit = false" class="btn btn-danger me-1">
+                            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            async Task Edit()
+            {
+                await hubConnection.SendAsync("SaveEdit", message);
+                dEdit = false;
+            }
+        }
+        else
+        {
+            <div class="m-0">@((MarkupString)message.MessageString)</div>
+        }
+
+        @if (dReply && !string.IsNullOrWhiteSpace(signedInUser.Id))
+        {
+            <EditForm Model="msg" OnValidSubmit="Reply" style="z-index: 1;">
+                <RadzenHtmlEditor @bind-Value="msg.MessageString" Placeholder="Write a comment..." Style="background-color: white;">
+                    <RadzenHtmlEditorUndo />
+                    <RadzenHtmlEditorRedo />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorBold />
+                    <RadzenHtmlEditorItalic />
+                    <RadzenHtmlEditorUnderline />
+                    <RadzenHtmlEditorStrikeThrough />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorColor />
+                    <RadzenHtmlEditorBackground />
+                    <RadzenHtmlEditorRemoveFormat />
+                    <RadzenHtmlEditorSeparator />
+                    <RadzenHtmlEditorLink />
+                    <RadzenHtmlEditorUnlink />
+                </RadzenHtmlEditor>
+
+                <div class="d-flex flex-row my-2">
+                    <div class="d-flex flex-row ms-auto">
+                        <button type="button" @onclick="() => { dReply = false; msg = new Message { SenderId = signedInUser.Id, RoomId = message.RoomId }; }" class="btn btn-danger me-1">
+                            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <RadzenIcon Icon="send" Style="display: flex !important;" />
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+        }
+        else if (isAuthenticated)
+        {
+            <p @onclick="() => dReply = true" class="btn-link reply">Reply</p>
+        }
+
+        @if (showReplies && model.Messages.Count() > 0)
+        {
+            <div class="pl-1" style="border-left: 1px solid black;">
+                @foreach (var m in model.Messages.OrderBy(x => x.Date))
+                {
+                    <Replies message="m" isAuthenticated="isAuthenticated" signedInUser="signedInUser" RecurseDelete="Delete" DeleteEvent="DeleteE" RemoveLike="RemoveLike"></Replies>
+
+                    async Task Delete()
+                    {
+                        model.Messages.Remove(m);
+                        StateHasChanged();
+                        await hubConnection.SendAsync("RemoveReply", m);
+                    }
+
+                    async Task DeleteE()
+                    {
+                        model.Messages.Remove(m);
+                        StateHasChanged();
+                        await hubConnection.SendAsync("RemoveReply", m);
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Message message { get; set; }
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public bool isAuthenticated { get; set; } = false;
+    [Parameter] public EventCallback DeleteEvent { get; set; }
+    [Parameter] public EventCallback RecurseDelete { get; set; }
+    [Parameter] public EventCallback RemoveLike { get; set; }
+
+    private bool showReplies = false;
+
+    private Message msg;
+    private bool dReply = false, dEdit = false, render = false;
+
+    private TimeSpan elapsed;
+    private string time = "";
+
+    HubConnection hubConnection;
+
+    private ReplyModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetReplyModelAsync(message);
+        msg = new Message { SenderId = signedInUser.Id, RoomId = message.RoomId };
+
+        elapsed = DateTime.Now.Subtract(model.Message.Date.ToDateTime());
+
+        if (elapsed.TotalSeconds < 59)
+            time = elapsed.TotalSeconds.ToString("0") + " seconds ago";
+        else if (elapsed.TotalMinutes < 59)
+            time = elapsed.TotalMinutes.ToString("0") + " minutes ago";
+        else if (elapsed.TotalHours < 23)
+            time = elapsed.TotalHours.ToString("0") + " hours ago";
+        else if (elapsed.TotalDays < 30)
+            time = elapsed.TotalDays.ToString("0") + " days ago";
+        else if (elapsed.TotalDays > 364)
+            time = (elapsed.TotalDays / 365).ToString("0") + " years ago";
+        else if (elapsed.TotalDays > 29)
+            time = (elapsed.TotalDays / 30).ToString("0") + " months ago";
+
+        hubConnection = new HubConnectionBuilder()
+            .WithAutomaticReconnect()
+            .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/postreal"))
+            .Build();
+
+        render = true;
+        StateHasChanged();
+
+        hubConnection.On<Message>("HasReplied", (msg) =>
+        {
+            model.Messages.Add(msg);
+            StateHasChanged();
+        });
+
+        hubConnection.On<Message>("RemovedReply", (msg) =>
+        {
+            var m = model.Messages.Where(x => x.MessageId == msg.MessageId).FirstOrDefault();
+            model.Messages.Remove(m);
+            StateHasChanged();
+            DeleteEvent.InvokeAsync();
+            RecurseDelete.InvokeAsync();
+        });
+
+        hubConnection.On<Like>("Liked", (like) =>
+        {
+            model.Likes.Add(like);
+            if(model.Like.UserId == like.UserId)
+                model.Like = like;
+            StateHasChanged();
+        });
+
+        hubConnection.On<Like>("UnLiked", (like) =>
+        {
+            model.Likes.Remove(model.Likes.Where(x => x.LikeId == like.LikeId).FirstOrDefault());
+            StateHasChanged();
+        });
+
+        hubConnection.On("SavedEdit", () =>
+        {
+            dEdit = false;
+            StateHasChanged();
+        });
+
+        hubConnection.On<Message>("Replied", (msg) =>
+        {
+            model.Messages.Add(msg);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("ConnectMessage", message.MessageId);
+    }
+
+    private async Task Reply()
+    {
+        if (!string.IsNullOrWhiteSpace(msg.SenderId))
+        {
+            await hubConnection.SendAsync("Reply", msg, message);
+
+            msg = new Message { SenderId = signedInUser.Id, RoomId = message.RoomId };
+            dReply = false;
+            StateHasChanged();
+        }
+    }
+
+    async void IDisposable.Dispose()
+    {
+        if(hubConnection.State == HubConnectionState.Connected)
+            await hubConnection.SendAsync("DisconnectMessage", message.MessageId);
+    }
+}

@@ -1,0 +1,64 @@
+﻿@page "/video"
+
+@inject MainProto.MainProtoClient MainClient
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    main {
+        width: initial !important;
+    }
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+        gap: 50px 50px;
+        width: 100%;
+    }
+
+    .grid-item {
+        text-align: center;
+        background-color: lightgray;
+        width: 100%;
+        height: 18rem;
+        display: inline-grid;
+    }
+</style>
+
+<div class="d-flex flex-row">
+    <div class="me-3" style="width: max-content;">
+        @for(int i = 0; 20 > i; i++)
+        {
+            <p style="width: max-content;">Item @i</p>
+        }
+    </div>
+
+    <div class="grid-content">
+        @foreach(var l in model.Likes)
+        {
+            var v = model.Videos.Where(x => x.VideoId == l.VideoId).FirstOrDefault();
+            
+        }
+    </div>
+
+    <div class="grid-container">
+        @for(int i = 0; 12 > i; i++)
+        {
+            <div class="grid-item"></div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool render = false;
+
+    private VideoHomePage model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetVideoHomePageAsync(new Empty());
+
+        //await JSRuntime.InvokeVoidAsync("setVWidth", list, videos);
+    }
+}

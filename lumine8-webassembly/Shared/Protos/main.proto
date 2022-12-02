@@ -1,0 +1,1678 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "lumine8_GrpcService";
+package MainProto;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/Empty.proto";
+
+service MainProto {
+	rpc CheckVersion (Id) returns (google.protobuf.BoolValue);
+
+    /*****Identity*****/
+    rpc CreateAccount (LoginUser) returns (CreateAccountResponse);
+	rpc DeleteAccount (LoginUser) returns (google.protobuf.Empty);
+	rpc TempAuthenticate (LoginUser) returns (Authenticated);
+	rpc Authenticate (LoginUser) returns (Authenticated);
+	rpc ChangePassword (LoginUser) returns (google.protobuf.Empty);
+	rpc GetUser (LoginUser) returns (SharedUser);
+	rpc SaveKey (Verification) returns (google.protobuf.BoolValue);
+	rpc VerifyKey (Verification) returns (google.protobuf.BoolValue);
+
+    /*****Group*****/
+    //Page
+	rpc GetGroupPageModel (GroupId) returns (GroupPageModel);
+	rpc SetPriority (Role) returns (Role);
+	rpc SetSecurity (GroupSecurity) returns (GroupSecurity);
+	rpc SetGroupJoin (GroupModel) returns (GroupModel);
+	rpc GroupJoin (GroupModel) returns (ServerMessage);
+	rpc Update (GroupModel) returns (GroupModel);
+	rpc DeleteGroupLink (GroupLink) returns (GroupLink);
+	rpc UpdateGroupLink (GroupLink) returns (GroupLink);
+	rpc CreateGroupLink (GroupModel) returns (GroupLink);
+	rpc CreateHashtag (Hashtag) returns (Hashtag);
+	rpc DeleteHashtag (Hashtag) returns (Hashtag);
+	rpc PostLumine (PostModel) returns (Room);
+	rpc SwitchGroupProfilePicture (GroupImage) returns (GroupProfilePicture);
+	rpc DeleteGroupProfilePicture (GroupImage) returns (GroupImage);
+
+	//Picture Category
+	rpc GetPCM (GetPCMRequest) returns (PCM);
+	rpc DeletePictureCategory (GroupImage) returns (GroupImage);
+	rpc EditGroupImage (GroupImage) returns (GroupImage);
+
+	//Modal
+	rpc GetGroupModalModel (GroupImage) returns (GroupModal);
+	rpc DeleteGroupComment (GroupUserComment) returns (GroupUserComment);
+	rpc AddGroupComment (GroupUserComment) returns (AddGroupCommentReturn);
+
+	//Profile Picture
+	rpc GetGroupProfilePicture (GroupModel) returns (ProfilePictureModel);
+	//Main Profile Picture
+	rpc GetMainGroupProfilePicture (GroupModel) returns (MainGroupProfilePictureModel);
+
+	//Membership
+	rpc GetMembershipModel (GroupId) returns (MembershipModel);
+	rpc Leave (Role) returns (GroupModel);
+	rpc SearchInvites (SearchInvitesRequest) returns (SearchInvitesResponse);
+	rpc Promote (Role) returns (Role);
+	rpc PromoteLite (Role) returns (Role);
+	rpc RemoveMember (Role) returns (Role);
+	rpc BanUser (Role) returns (Role);
+	rpc SearchBan (SearchBanRequest) returns (SearchBanResponse);
+	rpc RemoveBan (Ban) returns (Ban);
+	rpc UpdateSectionRoles (SectionRoles) returns (SectionRoles);
+
+	//Pictures
+	rpc GetGroupPicturesPageModel (GroupId) returns (GroupPicturesPageModel);
+	rpc ChangeGroupCategories (ChangeGroupCategoriesRequest) returns (ChangeGroupCategoriesReponse);
+	rpc CreateGroupPostByCategory (CreateGroupPostByCategoryRequest) returns (CreateGroupPostByCategoryResponse);
+	rpc DeleteGroupImage (GroupImage) returns (GroupImage);
+
+    /*****Home*****/
+    rpc GetIndexModel (google.protobuf.Empty) returns (IndexPageModel);
+
+	//Tags
+	rpc AddTag (TagsFeed) returns (TagsFeed);
+	rpc BlacklistTag (TagsFeed) returns (TagsFeed);
+	rpc UpdateCheckTag (TagsFeed) returns (TagsFeed);
+	rpc DeleteTagFeed (TagsFeed) returns (TagsFeed);
+	rpc RemoveBlacklistTag (TagsFeed) returns (TagsFeed);
+	
+	//Friends
+	rpc RemoveFriendFilter (FriendDuo) returns (FriendDuo);
+	rpc RemoveFriendBlacklist (FriendDuo) returns (FriendDuo);
+	rpc AddFriendFilter (FriendDuo) returns (FriendDuo);
+	rpc AddBlacklistFriend (FriendDuo) returns (FriendDuo);
+
+	//Groups
+	rpc GroupRemoveFilter (Role) returns (Role);
+	rpc GroupRemoveBlacklist (Role) returns (Role);
+	rpc GroupAddFilter (Role) returns (Role);
+
+	//Misc
+	rpc GetRooms (IndexRooms) returns (Rooms);
+	rpc UpdateHours (SharedUser) returns (UpdatedHours);
+
+    /*****Profile*****/
+    //ChatPerson
+	rpc GetChatPersonModel (UserId) returns (ChatPersonModel);
+
+	//Introduction
+	rpc GetIntroductionPageModel (google.protobuf.Empty) returns (IntroductionPageModel);
+	rpc UpdateAboutMe (AboutMe) returns (google.protobuf.Empty);
+	rpc DeleteProfilePicture (Image) returns (Image);
+
+	//Picture Category
+	rpc GetCategoryModel (CategoryPageModelRequest) returns (CategoryPageModel);
+	rpc DeleteCategory (Image) returns (Image);
+	rpc EditImage (Image) returns (Image);
+
+	//Pictures
+	rpc GetPicturesPageModel (Id) returns (PicturesPageModel);
+	rpc GetFileNamesModel (FileNamesRequest) returns (FileNamesModel);
+	rpc ChangeCategories (ChangeCategoriesRequest) returns (ChangeCategoriesResponse);
+	rpc CreatePostByCategory (CreatePostByCategoryRequest) returns (CreatePostByCategoryResponse);
+	rpc DeleteImage (Image) returns (Image);
+
+	//Profile
+	rpc GetProfilePageModel (Id) returns (ProfilePageModel);
+	rpc CreateGroup (GroupModel) returns (CreateGroupResponse);
+	rpc ChangePriority (FriendDuo) returns (FriendDuo);
+	rpc UnFriend (Id) returns (SharedUser);
+	rpc AcceptFriendRequestProfile (Request) returns (SharedUser);
+	rpc DeleteLink (Link) returns (Link);
+	rpc UpdateLink (Link) returns (Link);
+	rpc CreateLink (Link) returns (Link);
+	rpc SwitchProfilePicture (Image) returns (ProfilePicture);
+
+	//Security
+	rpc GetSecurityPageModel (google.protobuf.Empty) returns (SecurityPageModel);
+	rpc AddException (SharedUser) returns (PrivateProfile);
+	rpc UpdateException (PrivateProfile) returns (google.protobuf.Empty);
+	rpc DeleteException (PrivateProfile) returns (PrivateProfile);
+	rpc GetPeople (Id) returns (PeopleModel);
+	rpc UpdateSecurity (ProfileSecurity) returns (ProfileSecurity);
+	rpc UpdateUserSettings (SharedUser) returns (SharedUser);
+
+	//PagePost
+	rpc GetPagePost (Id) returns (Room);
+
+	//PictureModal
+	rpc GetModalModel (Id) returns (ModalModel);
+	rpc AddComment (UserComment) returns (AddCommentResponse);
+	rpc DeleteComment (UserComment) returns (UserComment);
+
+	//Search
+	rpc GetSearchPageModel (google.protobuf.Empty) returns (SearchPageModel);
+	rpc GetInterests (Id) returns (GetInterestsResponse);
+	rpc GetSearchModel (SearchModel) returns (SearchResponse);
+	rpc GetSearchGroup (SearchGroupModel) returns (SearchGroupResponse);
+
+    /*****Shared*****/
+    //About
+	rpc GetAboutPageModel (Id) returns (AboutPageModel);
+	rpc UpdateAbout (UpdateAboutRequest) returns (google.protobuf.Empty);
+
+	//Education
+	rpc GetEducation (Id) returns (EducationRepsonse);
+	rpc CreateEducation (Education) returns (Education);
+	rpc DeleteEducation (Education) returns (Education);
+	rpc UpdateEducation (Education) returns (google.protobuf.Empty);
+
+	//Interests
+	rpc GetInterestPageModel (Id) returns (InterestPageModel);
+	rpc AddInterest (Interest) returns (Interest);
+	rpc DeleteInterest (Id) returns (Interest);
+	rpc FindInterests (Id) returns (InterestsModel);
+
+	//MainLayout
+	rpc GetMainLayoutModel (google.protobuf.Empty) returns (MainLayoutModel);
+	rpc DeleteNotifications (google.protobuf.Empty) returns (google.protobuf.Empty);
+	rpc DeleteNotification (Notification) returns (Notification);
+	rpc AcceptFriendRequest (Request) returns (Request);
+	rpc DeclineFriendRequest (Request) returns (Request);
+	rpc AcceptGroupRequest (GroupRequest) returns (GroupRequest);
+	rpc DeclineGroupRequest (GroupRequest) returns (GroupRequest);
+
+	//MainPP
+	rpc GetMainProfilePicture (Id) returns (MainProfilePictureModel);
+
+	//Places Lived
+	rpc GetPlacesLived (Id) returns (PlacesLivedResponse);
+	rpc CreatePlace (Lived) returns (Lived);
+	rpc DeletePlace (Lived) returns (Lived);
+	rpc UpdatePlace (Lived) returns (Lived);
+
+	//Post
+	rpc GetPostModel (Room) returns (PostPageModel);
+	rpc SaveEdit (SaveEditRequest) returns (Message);
+
+	//Profile Picture
+	rpc GetProfilePicture (Id) returns (ProfilePicturePageModel);
+
+	//Replies
+	rpc GetReplyModel (Message) returns (ReplyModel);
+
+	//Share
+	rpc Share (ShareRequest) returns (ShareResponse);
+	rpc UnShare (ShareRequest) returns (ShareResponse);
+
+	//Work History
+	rpc GetWorkHistory (Id) returns (WorkHistoryResponse);
+	rpc CreateWork (WorkHistory) returns (WorkHistory);
+	rpc UpdateWork (WorkHistory) returns (WorkHistory);
+	rpc DeleteWork (WorkHistory) returns (WorkHistory);
+
+	//Location
+	rpc GetStates (IdNumber) returns (StatesResponse);
+	rpc GetCities (IdNumber) returns (CitiesResponse);
+
+	//Petition
+	rpc GetPetitions (google.protobuf.Empty) returns (PetitionsPageModel);
+	rpc CreatePetition (PetitionModel) returns (PetitionModel);
+	rpc DeletePetition (PetitionModel) returns (PetitionModel);
+	rpc SignPetition (PetitionSig) returns (PetitionSig);
+	rpc UnsignPetition (PetitionSig) returns (PetitionSig);
+
+	//Video
+	rpc GetVideoHomePage (google.protobuf.Empty) returns (VideoHomePage);
+}
+
+/*****Models*****/
+message Id {
+	string Id = 1;
+}
+
+message ServerMessage {
+	string Message = 1;
+}
+
+//Identity
+message Verification {
+    string Username = 1;
+    string Key = 2;
+    string Token = 3;
+}
+
+message Token {
+	optional string TokenId = 1;
+	string UserId = 2;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 3;
+}
+
+message ApplicationUser {
+	optional string Id = 1;
+	string Username = 2;
+	string Name = 3;
+	bool AllowRequests = 4;
+	bool AllowGroupInvites = 5;
+	bool AllowSharing = 6;
+	bool FriendsFeed = 7;
+	google.protobuf.Timestamp UserSince = 8;
+	int32 HoursFeed = 9;
+
+	string PublicKey = 10;
+
+	//Child
+	/*repeated Token Tokens = 13;
+	repeated FriendDuo FriendDuos = 14;
+	repeated Request Requests = 15;
+	repeated GroupModel GroupModels = 16;
+	repeated GroupApproval GroupApprovals = 17;
+	repeated GroupRequest GroupRequests = 18;
+	repeated Ban Bans = 19;
+	repeated Exception Exceptions = 20;
+	repeated GroupImage GroupImages = 21;
+	repeated GroupUserComment GroupUserComments = 22;
+	repeated Role Roles = 23;
+	repeated Like Likes = 24;
+	repeated Message Messages = 25;
+	repeated Share Shares = 26;
+	repeated UserComment UserComment = 27;
+	repeated About About = 28;
+	repeated AboutMe AboutMe = 29;
+	repeated Education EducationList = 30;
+	repeated PFAQ PFAQs = 31;
+	repeated Interest Interests = 32;
+	repeated Link Links = 33;
+	repeated WorkHistory WorkHistories = 34;
+	repeated Lived Liveds = 35;
+	repeated MainPicture MainPicture = 36;
+	repeated PrivateProfile PrivateProfiles = 37;
+	repeated ProfilePicture ProfilePictures = 38;
+	repeated ProfileSecurity ProfileSecurity = 39;
+	repeated Relationship Relationships = 40;
+	repeated Subscribe Subscribes = 41;
+	repeated Video Videos = 42;
+	repeated VideoComment VideoComments = 43;
+	repeated Room Rooms = 44;
+	repeated Image Images = 45;
+	repeated Vote Votes = 46;
+	repeated TagsFeed TagsFeeds = 47;
+	repeated Notification Notifications = 48;
+	repeated UserRoom UserRooms = 49;
+	repeated ChatMessage ChatMessages = 50;*/
+}
+
+message LoginUser {
+	string Username = 1;
+	string Mnemonic = 2;
+	string Password = 3;
+	string NewPassword = 4;
+	string ConfirmPassword = 5;
+
+	string PrivateKey = 9;
+}
+
+message SharedUser {
+	string Id = 1;
+	string Name = 2;
+	string Username = 3;
+	bool AllowRequests = 4;
+	bool AllowGroupInvites = 5;
+	bool AllowSharing = 6;
+	bool FriendsFeed = 7;
+	google.protobuf.Timestamp UserSince = 8;
+	int32 HoursFeed = 9;
+	string TFASeed = 10;
+
+	string Mnemonic = 11;
+	string PrivateKey = 12;
+}
+
+//Friends
+message FriendDuo {
+    optional string FriendDuoId = 1;
+    string UserId = 2;
+    string FriendId = 3;
+    bool Filter = 4;
+    bool Blacklist = 5;
+    bool Priority = 6;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 7;
+}
+
+message Request {
+    optional string RequestId = 1;
+    string SentToId = 2;
+    string SenderId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+}
+
+message RequestRecipient {
+    optional string ReciepientId = 1;
+    string UserId = 2;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 3;
+}
+
+message FriendsFeed {
+    optional string FriendsFeedId = 1;
+    string UserId = 2;
+    string FriendId = 3;
+}
+
+//Group
+message Ban {
+	optional string BanId = 1;
+	string GroupId = 2;
+	string UserId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+	//GroupModel GroupModel = 5;
+}
+
+message Exception {
+	optional string ExceptionId = 1;
+    string GroupId = 2;
+    string UserId = 3;
+    bool Description = 4;
+    bool PostLumine = 5;
+    bool SendInvites = 6;
+    bool RemoveMember = 7;
+    bool Ban = 8;
+    bool RemoveBan = 9;
+    bool RequestLumine = 10;
+    bool ApproveLumine = 11;
+    bool SeeLumine = 12;
+    bool RemoveLumine = 13;
+    bool Pictures = 14;
+    bool UploadPictures = 15;
+    bool RemovePictures = 16;
+    bool ShareLumine = 17;
+    bool Hashtags = 18;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 19;
+	//GroupModel GroupModel = 20;
+}
+
+message FAQ {
+    optional string FAQId = 1;
+    string GroupId = 2;
+    string Question = 3;
+    string Answer = 4;
+
+	//Parent
+	//GroupModel GroupModel = 5;
+}
+
+enum Security {
+    PrivateSecurity = 0;
+    PublicSecurity = 1;
+}
+
+enum Join {
+    Invite = 0;
+    Approval = 1;
+    Anonymous = 2;
+}
+
+message GroupModel {
+	optional string GroupId = 1;
+    string Name = 2;
+    string Description = 3;
+    Security Security = 4;
+    string OwnerId = 5;
+    Join GroupJoin = 6;
+    google.protobuf.Timestamp CreateDate = 7;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 8;
+
+	//Child
+	repeated Ban Bans = 9;
+	repeated Exception Exceptions = 10;
+	repeated FAQ FAQs = 11;
+	repeated GroupApproval GroupApprovals = 12;
+	repeated GroupImage GroupImages = 13;
+	repeated GroupLink GroupLinks = 14;
+	repeated GroupProfilePicture GroupProfilePictures = 15;
+	repeated GroupRequest GroupRequests = 16;
+	repeated Hashtag Hashtags = 17;
+	repeated LumineCheck LumineChecks = 18;
+	repeated Role Roles = 19;
+	repeated SectionRoles SectionRoles = 20;
+	repeated RoomGroup RoomGroups = 21;*/
+}
+
+message GroupApproval {
+    optional string GroupApprovalId = 1;
+    string GroupId = 2;
+    string UserId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+	//GroupModel GroupModel = 5;
+}
+
+message GroupImage {
+    optional string ImageId = 1;
+    string UserId = 2;
+    string FileName = 3;
+    string Category = 4;
+    string Description = 5;
+    google.protobuf.Timestamp CreateDate = 6;
+    string GroupId = 7;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 8;
+	GroupModel GroupModel = 9;
+
+	//Child
+	repeated GroupUserComment GroupUserComments = 10;*/
+}
+
+message GroupLink {
+    optional string LinkId = 1;
+    string GroupId = 2;
+    string Name = 3;
+    string Address = 4;
+
+	//Parent
+	//GroupModel GroupModel = 5;
+}
+
+message GroupProfilePicture {
+    optional string ProfilePictureId = 1;
+    string ImageId = 2;
+    string GroupId = 3;
+
+	//Parent
+	//GroupModel GroupModel = 4;
+}
+
+message GroupRequest {
+    optional string RequestId = 1;
+    string UserId = 2;
+    string GroupId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+	//GroupModel GroupModel = 5;
+}
+
+message GroupUserComment {
+    optional string CommentId = 1;
+    string ImageId = 2;
+    string UserId = 3;
+    string Comment = 4;
+    google.protobuf.Timestamp CreateDate = 5;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 6;
+	//GroupImage GroupImage = 7;
+}
+
+message Hashtag {
+    optional string HashtagId = 1;
+    string GroupId = 2;
+    string Name = 3;
+
+	//Parent
+	//GroupModel GroupModel = 4;
+}
+
+message ImageRoom {
+    optional string ImageRoomId = 1;
+    string ImageId = 2;
+    string RoomId = 3;
+
+	//Parent
+	//Room Room = 4;
+}
+
+message LumineCheck {
+    optional string CheckId = 1;
+    string RoomId = 2;
+    string GroupId = 3;
+
+	//Parent
+	//GroupModel GroupModel = 4;
+	//Room Room = 7;
+}
+
+enum RoleType {
+    NoRole = 0;
+    Member = 1;
+    Moderator = 2;
+    Administrator = 3;
+    Owner = 4;
+}
+
+message Role {
+    optional string RoleId = 1;
+    string GroupId = 2;
+    string UserId = 3;
+    RoleType RoleType = 4;
+    bool Priority = 5;
+    bool Filter = 6;
+    bool Blacklist = 7;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 8;
+	//GroupModel GroupModel = 9;
+}
+
+message SectionRoles {
+    optional string SectionRolesId = 1;
+    string GroupId = 2;
+    RoleType Description = 3;
+    RoleType PostLumine = 4;
+    RoleType Permissions = 5;
+    RoleType PermissionsOneBelow = 6;
+    RoleType SendInvites = 7;
+    RoleType RemoveMember = 8;
+    RoleType Ban = 9;
+    RoleType RemoveBan = 10;
+    RoleType RequestLumine = 11;
+    RoleType CheckLumine = 12;
+    RoleType SeeLumine = 13;
+    RoleType RemoveLumine = 14;
+    RoleType Pictures = 15;
+    RoleType UploadPictures = 16;
+    RoleType UpdatePictures = 17;
+    RoleType RemovePictures = 18;
+    RoleType ShareLumine = 19;
+    RoleType Hashtags = 20;
+    RoleType RequestApprovals = 21;
+
+	//Parent
+	//GroupModel GroupModel = 22;
+}
+
+//Messages
+message Like {
+    optional string LikeId = 1;
+    string MessageId = 2;
+    string UserId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 7;
+	//Message Message = 8;
+}
+
+message Message {
+    optional string MessageId = 1;
+    string MessageString = 2;
+    string SenderId = 3;
+    google.protobuf.Timestamp Date = 4;
+    optional string RoomId = 5;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 7;
+	Room Room = 8;
+
+	//Child
+	repeated Like Likes = 11;*/
+}
+
+message MessageOnMessage {
+    optional string MessageOnMessageId = 1;
+    string MessageId = 2;
+    string MessageOnId = 3;
+}
+
+message MessageHashtag {
+    optional string MessageHashtagId = 1;
+    string RoomId = 2;
+    string Name = 3;
+
+	//Parent
+	//Room Room = 4;
+}
+
+message Room {
+    optional string RoomId = 1;
+    string OwnerId = 2;
+    google.protobuf.Timestamp Date = 3;
+    bool AllowComments = 4;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 5;
+	
+	repeated ImageRoom ImageRoom = 6;
+
+	//Child
+	repeated RoomGroup RoomGroups = 7;
+	repeated Message Messages = 8;
+	repeated RoomToMessage RoomToMessages = 9;
+	repeated MessageHashtag MessageHashtags = 10;
+	repeated LumineCheck LumineChecks = 11;
+	repeated VideoRoom VideoRooms = 12;
+	repeated ImageRoom ImageRooms = 13;
+	repeated CategoryRooms CategoryRooms = 14;
+	repeated Vote Votes = 15;
+	repeated Share Shares = 16;*/
+}
+
+message RoomGroup {
+    optional string RoomGroupId = 1;
+    string GroupId = 2;
+    string RoomId = 3;
+
+	//Parent
+	/*GroupModel GroupModel = 4;
+	RoomToMessage RoomToMessage = 5;
+	Room Room = 6;*/
+
+	//Child
+	
+}
+
+message RoomToMessage {
+    optional string RoomToMessageId = 1;
+    string RoomId = 2;
+    string MessageId = 3;
+
+	//Parent
+	/*Room Room = 4;
+	Message Message = 5;
+
+	//Child
+	repeated Share Shares = 6;
+	repeated CategoryRooms CategoryRooms = 7;
+	repeated RoomGroup RoomGroups = 8;*/
+}
+
+message Share {
+    optional string ShareId = 1;
+    string RoomId = 2;
+    string UserId = 3;
+    string SenderId = 4;
+    google.protobuf.Timestamp Date = 5;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 6;
+	RoomToMessage RoomToMessage = 7;
+	Room Room = 8;*/
+}
+
+message UserComment {
+    optional string UserCommentId = 1;
+    string ImageId = 2;
+    string UserId = 3;
+    string Comment = 4;
+    google.protobuf.Timestamp Date = 5;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 6;
+	//Image Image = 7;
+}
+
+//Personal
+enum Sex {
+    Other = 0;
+    Male = 1;
+    Female = 2;
+}
+
+enum Status {
+    NoAnswer = 0;
+    Single = 1;
+    Married = 2;
+    Divorced = 3;
+    Widowed = 4;
+    ItsComplicated = 5;
+}
+
+message About {
+    string AboutId = 1;
+    Sex Sex = 2;
+    Status MartialStatus = 3;
+    google.protobuf.Timestamp DOB = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+}
+
+message AboutMe {
+    string UserId = 1;
+    string AboutMeDescription = 2;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 3;
+}
+
+enum Level {
+    NoGraduation = 0;
+    HighSchool = 1;
+    SomeCollege = 2;
+    CollegeCreditCertificate = 3;
+    AssociateDegree = 4;
+    BachelorsDegree = 5;
+    MastersDegree = 6;
+    DoctoralDegree = 7;
+}
+
+message Education {
+    optional string EducationId = 1;
+    string UserId = 2;
+    string SchoolName = 3;
+    string Major = 4;
+    string Minor = 5;
+    Level Degree = 6;
+    int32 GraduationDate = 7;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 8;
+}
+
+message PFAQ {
+    optional string FAQId = 1;
+    string UserId = 2;
+    string Question = 3;
+    string Answer = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+}
+
+message Interest {
+    optional string InterestId = 1;
+    string UserId = 2;
+    string InterestName = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+}
+
+message Link {
+    optional string LinkId = 1;
+    string UserId = 2;
+    string Name = 3;
+    string Address = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+}
+
+message WorkHistory {
+    optional string WorkId = 1;
+    string UserId = 2;
+    string JobTitle = 3;
+    string Organization = 4;
+    google.protobuf.Timestamp From = 5;
+    google.protobuf.Timestamp To = 6;
+    bool Current = 7;
+    string PostalCode = 8;
+    string Street = 9;
+    int32 CountryId = 10;
+    int32 StateId = 11;
+    int32 CityId = 12;
+    string County = 13;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 14;
+}
+
+message Lived {
+    optional string PlaceLivedId = 1;
+    string UserId = 2;
+    int32 CountryId = 3;
+    int32 StateId = 4;
+    int32 CityId = 5;
+    string County = 6;
+    string PostalCode = 7;
+    google.protobuf.Timestamp From = 8;
+    google.protobuf.Timestamp To = 9;
+    bool Current = 10;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 11;
+}
+
+message MainPicture {
+    string UserId = 1;
+    string FileName = 2;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 3;
+}
+
+message PrivateProfile {
+    optional string PrivateProfileId = 1;
+    string UserId = 2;
+    string WhoId = 3;
+    bool About = 4;
+    bool AboutMe = 5;
+    bool PlacesLived = 6;
+    bool WorkHistory = 7;
+    bool Education = 8;
+    bool Lumine = 9;
+    bool Pictures = 10;
+    bool Groups = 11;
+    bool Friends = 12;
+    bool Interests = 13;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 14;
+}
+
+message ProfilePicture {
+    optional string ProfilePictureId = 1;
+    string ImageId = 2;
+    string UserId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+}
+
+enum SecurityLevel {
+    PrivateLevel = 0;
+    FriendsLevel = 1;
+    PublicLevel = 2;
+}
+
+message ProfileSecurity {
+    optional string UserId = 1;
+    SecurityLevel Sex = 2;
+    SecurityLevel Relationship = 3;
+    SecurityLevel DOB = 4;
+    SecurityLevel AboutMe = 5;
+    SecurityLevel PlacesLived = 6;
+    SecurityLevel WorkHistory = 7;
+    SecurityLevel Education = 8;
+    SecurityLevel Lumine = 9;
+    SecurityLevel Pictures = 10;
+    SecurityLevel Groups = 11;
+    SecurityLevel Friends = 12;
+    SecurityLevel Interests = 13;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 14;
+}
+
+enum RelationshipType {
+    Girlfriend = 0;
+    Boyfriend = 1;
+    Fiance = 2;
+    Wife = 3;
+    Husband = 4;
+    Father = 5;
+    Son = 6;
+    Brother = 7;
+    Mother = 8;
+    Daughter = 9;
+    Sister = 10;
+    Grandfather = 11;
+    Grandmother = 12;
+    Grandson = 13;
+    Uncle = 14;
+    Aunt = 15;
+    Cousin = 16;
+    Nephew = 17;
+    Niece = 18;
+    FatherInLaw = 19;
+    MotherInLaw = 20;
+    SonInLaw = 21;
+    DaughterInLaw = 22;
+    BrotherInLaw = 23;
+    SisterInLaw = 24;
+    StepFather = 25;
+    StepMother = 26;
+    StepSon = 27;
+    StepDaughter = 28;
+    StepSister = 29;
+    StepBrother = 30;
+    HalfBrother = 31;
+    HalfSister = 32;
+}
+
+message Relationship {
+    optional string RelationshipId = 1;
+    string UserId = 2;
+    string RelationshipWithId = 3;
+    RelationshipType RelationshipType = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+}
+
+//Video
+message Subscribe {
+    optional string SubscribeId = 1;
+    string SubscriberId = 2;
+    string UserId = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+}
+
+message Video {
+    optional string VideoId = 1;
+    string OwnerId = 2;
+    string FileName = 3;
+    string Title = 4;
+    string Category = 5;
+    string Description = 6;
+    int64 Views = 7;
+    google.protobuf.Timestamp UploadDate = 8;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 9;
+
+	//Child
+	//repeated VideoComment VideoComments = 10;
+	//repeated VideoRoom VideoRooms = 11;
+}
+
+message VideoLike {
+	optional string VideoLikeId = 1;
+	string VideoId = 2;
+	string UserId = 3;
+	bool Like = 4;
+	google.protobuf.Timestamp LikeDate = 5;
+}
+
+message VideoComment {
+    optional string CommentId = 1;
+    string UserId = 2;
+    string VideoId = 3;
+    string Comment = 4;
+    google.protobuf.Timestamp Date = 5;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 6;
+	Video Video = 7;
+
+	//Child
+	repeated VideoCommentOn VideoCommentOns = 8;
+
+	VideoCommentOn VideoCommentOn = 9;*/
+}
+
+message VideoCommentOn {
+    optional string Id = 1;
+    string CommentId = 2;
+    string CommentOnId = 3;
+
+	//Parent
+	//VideoComment VideoComment = 4;
+
+	//Child
+	//repeated VideoComment VideoComments = 5;
+}
+
+message VideoRoom {
+    optional string VideoRoomId = 1;
+    string RoomId = 2;
+    string VideoId = 3;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 4;
+	Room Room = 7;
+	Video Video = 8;*/
+}
+
+//Misc
+message CategoryRooms {
+    optional string CategoryRoomsId = 1;
+    string RoomId = 2;
+    string Category = 3;
+
+	//Parent
+	//Room Room = 4;
+	//RoomToMessage RoomToMessage = 5;
+}
+
+message Image {
+    optional string ImageId = 1;
+    string UserId = 2;
+    string FileName = 3;
+    string Category = 4;
+    string Description = 5;
+    google.protobuf.Timestamp UploadDate = 6;
+
+	//Parent
+	/*ApplicationUser ApplicationUser = 7;
+	ImageRoom ImageRoom = 8;
+
+	//Child
+	repeated UserComment UserComments = 9;*/
+}
+
+message TagsFeed {
+    optional string TagsFeedId = 1;
+    string UserId = 2;
+    string Tag = 3;
+    bool Checked = 4;
+    bool Blacklist = 5;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 6;
+}
+
+message Vote {
+    optional string VoteId = 1;
+    string UserId = 2;
+    string RoomId = 3;
+    bool UpDown = 4;
+    google.protobuf.Timestamp Date = 5;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 6;
+	//Room Room = 7;
+}
+
+//Chat
+message ChatMessage {
+    optional string MessageId = 1;
+    string RoomId = 2;
+    string Message = 3;
+    string SenderId = 4;
+    google.protobuf.Timestamp Date = 5;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 6;
+	//UserRoom UserRoom = 7;
+}
+
+message Notification {
+    optional string NotificationId = 1;
+    string UserId = 2;
+    string Message = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+}
+
+message UserRoom {
+    optional string UserRoomId = 1;
+    string UserId = 2;
+    string OtherId = 3;
+    string RoomId = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+
+	//Child
+	//repeated ChatMessage ChatMessages = 6;
+}
+
+//Location
+message Country {
+    int32 Id = 1;
+    string Sortname = 2;
+    string Name = 3;
+    int32 PhoneCode = 4;
+}
+
+message State {
+    int32 Id = 1;
+    string Name = 2;
+    int32 CountryId = 3;
+}
+
+message City {
+    int32 Id = 1;
+    string Name = 2;
+    int32 StateId = 3;
+}
+
+message PetitionModel {
+	optional string PetitionId = 1;
+	string CreatedById = 2;
+	string Petition = 3;
+}
+
+message PetitionSig {
+	optional string PetitionSigId = 1;
+	string UserId = 2;
+	string PetitionId = 3;
+}
+
+/*****Identity*****/
+message UserId {
+	string UserId = 1;
+}
+
+message CreateAccountResponse {
+	SharedUser SharedUser = 1;
+	string Mnemonic = 2;
+	string PrivateKey = 3;
+}
+
+message Tokens {
+	repeated Token Tokens = 1;
+}
+
+message Authenticated {
+	bool isAuthenticated = 1;
+}
+
+message TokenReturn {
+	string Token = 1;
+}
+
+message ChangedPassword {
+	bool Changed = 1;
+}
+
+/*****Group*****/
+//Pictures
+message CreateGroupPostByCategoryRequest {
+	string GroupId = 1;
+	string Category = 2;
+	Message Message = 3;
+}
+
+message CreateGroupPostByCategoryResponse {
+	string Category = 1;
+}
+
+message ChangeGroupCategoriesRequest {
+	string GroupId = 1;
+	string From = 2;
+	string To = 3;
+}
+
+message ChangeGroupCategoriesReponse {
+	string From = 1;
+	string To = 2;
+	repeated GroupImage Images = 3;
+}
+
+message GroupPicturesPageModel {
+	SharedUser SignedInUser = 1;
+	Role SignedInUserRole = 2;
+	GroupModel Group = 3;
+	repeated Role Roles = 4;
+	SectionRoles SectionRoles = 5;
+	bool Banned = 6;
+	repeated GroupImage Images = 7;
+}
+
+//Membership
+message SearchBanRequest {
+	string GroupId = 1;
+	string Value = 2;
+}
+
+message SearchBanResponse {
+	repeated SharedUser Users = 1;
+}
+
+message SearchInvitesResponse {
+	repeated SharedUser Users = 1;
+}
+
+message SearchInvitesRequest {
+	string Value = 1;
+	string GroupId = 2;
+}
+
+message MembershipModel {
+	GroupModel Group = 1;
+	SharedUser SignedInUser = 2;
+	SharedUser Owner = 3;
+	Role SignedInUserRole = 4;
+	SectionRoles SectionRoles = 5;
+	repeated Role Roles = 6;
+	repeated SharedUser Members = 7;
+	repeated Ban Bans = 8;
+	repeated FriendDuo Friends = 9;
+}
+
+//Profile Picture
+message ProfilePictureModel {
+	GroupImage Image = 1;
+	GroupProfilePicture ProfilePicture = 2;
+}
+
+//Main Profile Picture
+message MainGroupProfilePictureModel {
+	GroupProfilePicture ProfilePicture = 1;
+	GroupImage Image = 2;
+}
+
+//Modal
+message GroupModal {
+	repeated GroupUserComment Comments = 1;
+	repeated SharedUser Users = 2;
+}
+
+message AddGroupCommentReturn {
+	GroupUserComment Comment = 1;
+	SharedUser User = 2;
+}
+
+//Picture Category Model
+message GetPCMRequest {
+	string Username = 1;
+	string GroupId = 2;
+	string Cagetory = 3;
+}
+
+message PCM {
+	SharedUser SignedInUser = 1;
+	Role SignedInUserRole = 2;
+	GroupModel Group = 3;
+	SectionRoles SectionRoles = 4;
+	bool Banned = 5;
+	bool IsRole = 6;
+	repeated GroupImage Images = 7;
+}
+
+//Main Page
+message GroupId {
+	string GroupId = 1;
+}
+
+message PostModel {
+	string GroupId = 1;
+	Message Message = 2;
+	Room Room = 3;
+	repeated MessageHashtag mHashtags = 4;
+}
+
+message GroupSecurity {
+	GroupModel Group = 1;
+	Security Security = 2;
+	bool bSecurity = 3;
+}
+
+message GroupPageModel {
+	GroupModel GroupModel = 1;
+	bool Valid = 2;
+	SharedUser SignedInUser = 3;
+	Role signedInUserRole = 4;
+	repeated Role Roles = 5;
+	SectionRoles SectionRoles = 6;
+	repeated Role Owners = 7;
+	repeated Role Administrators = 8;
+	repeated Role Moderators = 9;
+	repeated Role Members = 10;
+	bool Security = 11;
+	repeated Hashtag Hashtags = 12;
+	repeated Room Rooms = 13;
+	GroupProfilePicture pp = 14;
+	repeated GroupImage pps = 15;
+	repeated SharedUser suMembers = 16;
+	repeated GroupLink Links = 17;
+}
+
+/*****Home*****/
+message UpdatedHours {
+	int32 Hours = 1;
+}
+
+enum TagOptions {
+    NoFilter = 0;
+	FilterChecked = 1;
+	FilterBoth = 2;
+}
+
+message Rooms {
+	repeated Room Rooms = 1;
+}
+
+message IndexRooms {
+	string UserId = 1;
+	bool You = 2;
+	bool bShares = 3;
+	bool fGroups = 4;
+	bool fFriends = 5;
+	TagOptions TagOptions = 6;
+}
+
+//Page 
+message IndexPageModel {
+	SharedUser User = 1;
+	repeated SharedUser suFriends = 2;
+	repeated FriendDuo Friends = 3;
+	repeated TagsFeed TagsFeeds = 4;
+	repeated Role RolesFilter = 5;
+	repeated Role RolesBlacklist = 6;
+	repeated Role Roles = 7;
+	repeated GroupModel Groups = 8;
+}
+
+/*****Profile*****/
+//Search
+message SearchGroupResponse {
+	repeated GroupModel Groups = 1;
+	repeated GroupProfilePicture GroupProfilePictures = 2;
+	repeated GroupImage Images = 3;
+}
+
+message SearchGroupModel {
+	string Name = 1;
+	Join Join = 2;
+	repeated string Tags = 3;
+}
+
+message SearchResponse {
+	repeated SharedUser Users = 1;
+	repeated ProfilePicture ProfilePictures = 2;
+	repeated Image Images = 3;
+}
+
+message SearchModel {
+	string Name = 1;
+	About About = 2;
+	Lived Live = 3;
+	Education Education = 4;
+	SharedUser SignedInUser = 5;
+	repeated Interest Interests = 6;
+	bool bInterest = 7;
+	bool bAbout = 8;
+	bool bPlace = 9;
+	bool bEducation = 10;
+}
+
+message GetInterestsResponse {
+	repeated Interest Interests = 1;
+}
+
+message SearchPageModel {
+	SharedUser SignedInUser = 1;
+	repeated SharedUser Users = 2;
+	repeated ProfilePicture ProfilePictures = 3;
+	repeated Image Images = 4;
+	repeated GroupModel Groups = 5;
+	repeated GroupProfilePicture GroupProfilePictures = 6;
+	repeated GroupImage GroupImages = 7;
+}
+
+//Picture Modal
+message AddCommentResponse {
+	SharedUser User = 1;
+	UserComment UserComment = 2;
+}
+
+message ModalModel {
+	repeated UserComment UserComments = 1;
+	repeated SharedUser Users = 2;
+}
+
+//Security
+message PeopleModel {
+	repeated SharedUser Users = 1;
+}
+
+message SecurityPageModel {
+	SharedUser User = 1;
+	ProfileSecurity ProfileSecurity = 2;
+	repeated PrivateProfile PrivateProfiles = 3;
+	repeated SharedUser Users = 4;
+	repeated FriendDuo Friends = 5;
+}
+
+//Profile
+message CreateGroupResponse {
+	GroupModel Group = 1;
+	Role Role = 2;
+}
+
+message ProfilePageModel {
+	SharedUser User = 1;
+	SharedUser SignedInUser = 2;
+	repeated Link Links = 3;
+	ProfileSecurity ProfileSecurity = 4;
+	repeated PrivateProfile PrivateProfiles = 5;
+	AboutMe AboutMe = 6;
+	repeated WorkHistory WorkHistories = 7;
+	repeated Education EducationList = 8;
+	repeated Room Rooms = 9;
+	repeated FriendDuo Friends = 10;
+	repeated SharedUser suFriends = 11;
+	repeated GroupModel Groups = 12;
+	repeated Role Roles = 13;
+	repeated string MutualFriends = 14;
+	ProfilePicture ProfilePicture = 15;
+	repeated Image ProfilePictures = 16;
+	Request Request = 17;
+	FriendDuo Friend = 18;
+	repeated PetitionModel Petitions = 19;
+}
+
+//Pictures
+message CreatePostByCategoryRequest {
+	Message Message = 1;
+	string Category = 2;
+}
+
+message CreatePostByCategoryResponse {
+	string Category = 1;
+}
+
+message ChangeCategoriesRequest {
+	string To = 1;
+	string From = 2;
+}
+
+message ChangeCategoriesResponse {
+	string From = 1;
+	string To = 2;
+	repeated Image Images = 3;
+}
+
+message FileNamesRequest {
+	string UserId = 1;
+	repeated string CurrentDirectories = 2;
+}
+
+message FileNamesModel {
+	repeated string Files = 1;
+	repeated string Directories = 2;
+	repeated string CurrentDirectories = 3;
+}
+
+message PicturesPageModel {
+	SharedUser SignedInUser = 1;
+	SharedUser User = 2;
+	repeated Image Images = 3;
+	repeated string Directories = 4;
+	repeated string Files = 5;
+}
+
+//Picture Category
+message CategoryPageModelRequest {
+	string Username = 1;
+	string Category = 2;
+}
+
+message CategoryPageModel {
+	SharedUser SignedInUser = 1;
+	SharedUser User = 2;
+	repeated Image Images = 3;
+}
+
+//Introduction
+message IntroductionPageModel {
+	SharedUser SignedInUser = 1;
+	ProfileSecurity ProfileSecurity = 2;
+	repeated PrivateProfile PrivateProfile = 3;
+	AboutMe AboutMe = 4;
+	ProfilePicture ProfilePicture = 5;
+	repeated Image ProfilePictures = 6;
+}
+
+//ChatPerson
+message ChatPersonModel {
+	SharedUser User = 1;
+	UserRoom UserRoom = 2;
+	repeated ChatMessage ChatMessages = 3;
+}
+
+/*****Shared*****/
+//User Post
+message PostLumineRequest {
+	string ImageId = 1;
+}
+
+//Location
+message IdNumber {
+	int32 Id = 1;
+}
+
+message CitiesResponse {
+	repeated City Cities = 1;
+}
+
+message StatesResponse {
+	repeated State States = 1;
+}
+
+//Work History
+message WorkHistoryResponse {
+	repeated WorkHistory WorkHistories = 1;
+	repeated Country Countries = 2;
+	repeated State States = 3;
+	repeated City Cities = 4;
+}
+
+//Share
+message ShareRequest {
+	Room Room = 1;
+	SharedUser Friend = 2;
+}
+
+message ShareResponse {
+	Share Share = 1;
+	string Name = 2;
+}
+
+//Replies
+message ReplyModel {
+	SharedUser User = 1;
+	Message Message = 2;
+	repeated MessageOnMessage MessageOnMessages = 3;
+	repeated Message Messages = 4;
+	Like Like = 5;
+	repeated Like Likes = 6;
+}
+
+//Profile Picture
+message ProfilePicturePageModel {
+	ProfilePicture ProfilePicture = 1;
+	Image Image = 2;
+	bool isFriend = 4;
+}
+
+//Post
+message SaveEditRequest {
+	Message Message = 1;
+	repeated MessageHashtag Hashtags = 2;
+}
+
+message PostPageModel {
+	Room Room = 1;
+	SharedUser Owner = 2;
+	RoomGroup RoomGroup = 3;
+	GroupModel Group = 4;
+	SharedUser SignedInUser = 5;
+	Role SignedInUserRole = 6;
+	SectionRoles SectionRoles = 7;
+	CategoryRooms CategoryRooms = 8;
+	RoomToMessage RoomToMessage = 9;
+	repeated Vote Votes = 10;
+	repeated SharedUser suVotes = 11;
+	Like Like = 12;
+	repeated ImageRoom ImageRooms = 13;
+	repeated Image Images = 14;
+	Message Message = 15;
+	repeated Message Messages = 16;
+	ProfilePicture ProfilePicture = 17;
+	Image Picture = 18;
+	repeated Image Categories = 19;
+	repeated Image ImageIndex = 20;
+	repeated GroupImage GroupImages = 21;
+	repeated GroupImage GroupImagesCategory = 22;
+	repeated Image ImagesFromRoom = 23;
+	repeated FriendDuo Friends = 24;
+	int32 MessageCount = 25;
+	repeated SharedUser MyFriends = 26;
+	repeated Share Shares = 27;
+	repeated MessageHashtag MessageHashtags = 28;
+}
+
+//Places Lived
+message PlacesLivedResponse {
+	repeated Lived PlacesLived = 1;
+	repeated Country Countries = 2;
+	repeated State States = 3;
+	repeated City Cities = 4;
+}
+
+message MainProfilePictureModel {
+	SharedUser User = 1;
+	ProfilePicture ProfilePicture = 2;
+	Image Image = 3;
+}
+
+//MainLayout
+message Notifications {
+	repeated Notification Notifications = 1;
+}
+
+message MainLayoutModel {
+	SharedUser SignedInUser = 1;
+	repeated Request Requests = 2;
+	repeated GroupRequest GroupRequests = 3;
+	repeated Notification Notifications = 4;
+	repeated SharedUser suRequests = 5;
+	repeated ProfilePicture ProfilePictureRequests = 6;
+	repeated Image Images = 7;
+	repeated GroupModel Groups = 8;
+	repeated GroupProfilePicture GroupProfilePictureRequests = 9;
+	repeated GroupImage GroupImages = 10;
+	repeated SharedUser Friends = 11;
+	repeated SharedUser NotFriends = 12;
+}
+
+//Interests
+message InterestsModel {
+	repeated Interest Interests = 1;
+}
+
+message InterestPageModel {
+	ProfileSecurity ProfileSecurity = 1;
+	repeated Interest Interests = 2;
+	bool isFriend = 3;
+}
+
+//Education
+message EducationRepsonse {
+	repeated Education EducationList = 1;
+}
+
+//About
+message UpdateAboutRequest {
+	About About = 1;
+	SharedUser User = 2;
+}
+
+message AboutPageModel {
+	About About = 1;
+	bool isFriend = 2;
+	ProfileSecurity ProfileSecurity = 3;
+	repeated PrivateProfile PrivateProfiles = 4;
+}
+
+message CreatePetition {
+	string UserId = 1;
+	string Petition = 2;
+}
+
+message PetitionsPageModel {
+	SharedUser user = 1;
+	repeated PetitionModel Petitions = 2;
+	repeated PetitionSig PetitionSigs = 3;
+	repeated SharedUser Users = 4;
+}
+
+message VideoHomePage {
+	repeated Video videos = 1;
+	repeated VideoLike likes = 2;
+}

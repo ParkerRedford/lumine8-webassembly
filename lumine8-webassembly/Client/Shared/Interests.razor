@@ -1,0 +1,166 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@if (render)
+{
+    <div class="card">
+        <div class="card-header d-flex flex-column text-left">
+            <div class="d-flex flex-row">
+                <h5 class="d-flex m-auto w-100" style="line-height: inherit; background-color: initial; font-size: larger;">
+                    <span class="me-1">Interests</span>
+                    <RadzenIcon Icon="group_work" Style="display: flex !important" />
+                </h5>
+
+                @if (!disable)
+                {
+                    <div style="position: relative;">
+                        <EditForm Model="interest" class="d-flex flex-row">
+                            <input @bind-value="interest.InterestName" @oninput="async (EventArgs) => await StartWatch(EventArgs.Value.ToString())" type="text" style="width: max-content;" placeholder="Add interest" class="form-control my-auto h-auto" />
+                            <button type="submit" @onclick="AddInterest" class="btn btn-success-fill">
+                                <RadzenIcon Icon="add" Style="display: flex !important" />
+                            </button>
+                        </EditForm>
+
+                        @if (cInterests.Interests.Count() > 0)
+                        {
+                            <div style="position: absolute; flex-direction: column;">
+                                @foreach (var i in cInterests.Interests.Select(x => x.InterestName).Distinct())
+                                {
+                                    <MyButton Callback="Add">
+                                        <ButtonContent>@i</ButtonContent>
+                                    </MyButton>
+
+                                    async Task Add()
+                                    {
+                                        model.Interests.Add(await MainClient.AddInterestAsync(new Interest { InterestName = i, UserId = signedInUser.Id }));
+                                        interest = new Interest { UserId = signedInUser.Id };
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    async Task AddInterest()
+                    {
+                        try
+                        {
+                            model.Interests.Add(await MainClient.AddInterestAsync(interest));
+                            interest = new Interest { UserId = signedInUser.Id };
+                        }
+                        catch (System.Exception ex)
+                        {
+                            
+                        }
+                    }
+                }
+            </div>
+
+            @if (!disable)
+            {
+                <details style="max-width: fit-content;;">
+                    <summary>Instructions</summary>
+                    Add interests to your profile such as crypto, programming, video games, etc. These interests can be searchable through the "Find Friends" page. Clicking on the X next to an interest will remove that interest.
+                </details>
+            }
+        </div>
+
+        @if (disable)
+        {
+            if (((model.ProfileSecurity.Interests == SecurityLevel.PrivateLevel) 
+            && (model.ProfileSecurity != null)) 
+            || (model.ProfileSecurity.Interests == SecurityLevel.FriendsLevel && isFriend) 
+            || isMod)
+            {
+                <div class="d-flex flex-row text-left flex-wrap" style="max-width: fit-content;">
+                    @foreach (var i in model.Interests)
+                    {
+                        <span class="d-flex flex-row px-2" style="border-right: 1px solid grey;">@i.InterestName</span>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="d-flex flex-row text-left flex-wrap" style="max-width: fit-content;">
+                @foreach (var i in model.Interests)
+                {
+                    <div class="d-flex flex-row ms-2 px-1" style="border-right: 1px solid grey;">
+                        <span>@i.InterestName</span>
+                        <button type="button" @onclick="DeleteInterest" class="btn btn-danger" style="width: min-content;">
+                            <RadzenIcon Icon="close" Style="display: flex !important" />
+                        </button>
+                    </div>
+                    async Task DeleteInterest()
+                    {
+                        var del = await MainClient.DeleteInterestAsync(new Id { Id_ = i.InterestId });
+                        model.Interests.Remove(del);
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public SharedUser User { get; set; }
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public bool disable { get; set; }
+
+    private bool render = false;
+
+    private InterestsModel cInterests = new();
+
+    private bool isMod = false;
+    private bool isFriend = false;
+
+    private Interest interest;
+    private Stopwatch watch = new Stopwatch();
+    private TimeSpan ts;
+
+    private InterestPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        interest = new Interest { UserId = signedInUser.Id };
+
+        model = await MainClient.GetInterestPageModelAsync(new Id { Id_ = User.Id }, authService.headers);
+
+        if (User.Id == signedInUser.Id)
+            isMod = true;
+
+        render = true;
+    }
+
+    private async Task StartWatch(string value)
+    {
+        watch.Stop();
+        watch.Reset();
+        watch.Start();
+
+        bool b = true;
+        while (b)
+        {
+            ts = watch.Elapsed;
+
+            await Task.Delay(100);
+            StateHasChanged();
+
+            if (ts.TotalSeconds >= 1)
+                b = false;
+        }
+
+        watch.Stop();
+        watch.Reset();
+        StateHasChanged();
+        await FindInterests(value);
+    }
+
+    private async Task FindInterests(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            cInterests = new InterestsModel();
+        else
+            cInterests = await MainClient.FindInterestsAsync(new Id { Id_ = value });
+    }
+}

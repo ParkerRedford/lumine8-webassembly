@@ -1,0 +1,56 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigatorManager
+
+@inject SingletonVariables variables
+
+@if (render)
+{
+    <figure class="d-flex flex-column m-1 my-auto" style="border-radius: 1rem;">
+        @if (model.ProfilePicture != null)
+        {
+            <img class="my-auto" style="width: 128px !important; height: 128px !important; border-radius: 1rem;" src="@variables.uri/p/u/@(model.User.Id)/@(model.Image.FileName)" />
+        }
+        else
+        {
+            <img class="my-auto" style="width: 128px !important; height: 128px !important;" src="/p/No_image_available.svg" />
+        }
+        @if (model.User != null && !string.IsNullOrWhiteSpace(model.User.Id))
+        {
+            <figcaption class="m-auto">
+                <a @onclick="GoToPerson" class="my-auto" href="/u/@(model.User.Username)">@model.User.Name</a>
+            </figcaption>
+        }
+        else
+        {
+            <p>Error</p>
+        }
+    </figure>
+}
+
+@code {
+    [Parameter] public string UserId { get; set; }
+
+    private MainProfilePictureModel model = new();
+
+    private bool render = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetMainProfilePictureAsync(new Id { Id_ = UserId });
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        model = await MainClient.GetMainProfilePictureAsync(new Id { Id_ = UserId });
+
+        StateHasChanged();
+    }
+
+    async Task GoToPerson()
+    {
+        navigatorManager.NavigateTo($"/u/{model.User.Username}", true);
+    }
+}

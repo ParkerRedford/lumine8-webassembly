@@ -1,0 +1,120 @@
+﻿@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #2C2E6B;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    body {
+        background-color: white;
+    }
+}
+
+h3 {
+    color: white;
+}
+
+.container {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+img {
+    width: 10rem;
+    margin: 0 2rem;
+}
+
+.img {
+    display: flex;
+    flex-direction: column;
+}
+
+.img1 {
+    width: 7rem;
+    margin: 0;
+}
+
+    .link:hover {
+        color: #3975b8 !important;
+    }
+
+figure {
+    margin: 0 1rem;
+}
+
+span {
+    font-size: 48pt;
+    margin: auto 0;
+}
+
+.card {
+    margin: 1rem;
+    border-radius: 1rem;
+    border: none;
+    background-color: #7a7a7a;
+}
+
+.card-img-top {
+    width: 10rem;
+    height: auto;
+    margin: 1rem auto;
+}
+
+.card-body {
+    margin: 0;
+    border-radius: 0 0 1rem 1rem;
+}
+
+.card {
+    background-color: darkgrey;
+}
+
+.card-body {
+    background-color: #452b5e;
+    color: white;
+}
+
+.service {
+    margin: auto;
+}
+
+.card-header {
+    font-weight: 900;
+}
+
+#mainCard {
+    width: 75%;
+}
+
+.downloadsCard {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    #mainCard {
+        width: auto;
+    }
+
+    .pics {
+        flex-direction: column !important;
+    }
+
+    .img {
+        width: 40% !important;
+        margin: auto;
+    }
+
+    .howto {
+        flex-direction: column;
+    }
+
+    .flexGroup {
+        flex-direction: column !important;
+    }
+
+    .downloadsCard {
+        width: auto;
+    }
+}
+

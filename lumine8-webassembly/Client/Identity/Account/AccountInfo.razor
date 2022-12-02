@@ -1,0 +1,35 @@
+﻿@page "/Account/Info"
+@layout AccountLayout
+
+@inject AuthenticationService authService
+
+@using Nethereum.HdWallet;
+
+<h3>Account Info</h3>
+
+<label>Mnemonic</label>
+<p>@authService.loginUser.Mnemonic</p>
+
+<label>Private Key</label>
+<p>@authService.loginUser.PrivateKey</p>
+
+@if (acc != null)
+{
+    <label>Public Key</label>
+    <p>@acc.PublicKey</p>
+
+    <label>Address</label>
+    <p>@acc.Address</p>
+}
+
+@code {
+    string publicKey = string.Empty;
+
+    BitcoinSecret secret;
+    Nethereum.Web3.Accounts.Account acc;
+
+    protected override async Task OnInitializedAsync()
+    {
+        acc = new Nethereum.Web3.Accounts.Account(authService.loginUser.PrivateKey);
+    }
+}

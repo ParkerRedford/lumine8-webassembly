@@ -1,0 +1,41 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigatorManager
+
+@inject SingletonVariables variables
+
+@if (render)
+{
+    <figure class="d-flex flex-row my-auto mx-0">
+        @if (model.ProfilePicture != null)
+        {
+            <img style="width: 2rem !important; height: 2rem !important; border-radius: 1rem;" src="@variables.uri/p/g/@(group.GroupId)/@(model.Image.FileName)" />
+        }
+        else
+        {
+            <img style="width: 2rem !important; height: 2rem !important;" src="/p/No_image_available.svg" />
+        }
+        <figcaption class="my-auto ms-1">
+            <a @onclick="GoToPerson" href="/g/@(group.GroupId)/">@group.Name</a>
+        </figcaption>
+    </figure>
+}
+
+@code {
+    [Parameter] public GroupModel group { get; set; }
+
+    private bool render = false;
+    private ProfilePictureModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetGroupProfilePictureAsync(group);
+
+        render = true;
+        StateHasChanged();
+    }
+
+    void GoToPerson()
+    {
+        navigatorManager.NavigateTo($"/g/{group.GroupId}", true);
+    }
+}

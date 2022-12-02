@@ -1,0 +1,94 @@
+﻿@page "/petitions"
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+<h3>Petitions</h3>
+
+@if (render)
+{
+    <InputText @oninput="(EventArgs) => {lpetitions = petitions.Petitions.Where(x => x.Petition.ToLower().Contains(EventArgs.Value.ToString().ToLower())).ToList();}" class="form-control" placeholder="Search petitions"></InputText>
+
+    @if (authService.isAuthenticated)
+    {
+        <EditForm Model="petition" OnValidSubmit="CreatePetition">
+            <InputTextArea @bind-Value="petition.Petition" class="form-control" placeholder="Create a petition"></InputTextArea>
+            <button type="submit" class="btn btn-success-fill ms-auto">Submit</button>
+        </EditForm>
+    }
+    else
+    {
+        <p>Login to sign petitions</p>
+    }
+
+    @foreach (var p in lpetitions)
+    {
+        var u = petitions.Users.Where(x => x.Id == p.CreatedById).FirstOrDefault();
+        var sigs = petitions.PetitionSigs.Where(x => x.PetitionId == p.PetitionId).Count();
+        var uSig = petitions.PetitionSigs.Where(x => x.UserId == petitions.User.Id && x.PetitionId == p.PetitionId).FirstOrDefault();
+
+        <div class="card">
+            <div class="card-body d-flex flex-row">
+                <p>@p.Petition</p>
+                <p class="ms-auto">
+                    Created by: <a href="/u/@u.Username">@u.Name</a>
+                </p>
+                @if (p.CreatedById == petitions.User.Id)
+                {
+                    <button type="button" @onclick="async () => {petitions.Petitions.Remove(await MainClient.DeletePetitionAsync(p, authService.headers)); lpetitions.Remove(p);}" class="btn btn-danger-fill ms-2">
+                        <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                    </button>
+                }
+            </div>
+            <div class="card-footer d-flex flex-row">
+                <p>Signatures: @sigs</p>
+                @if (authService.isAuthenticated)
+                {
+                    if (uSig == null)
+                    {
+                        <button type="button" @onclick="async () => petitions.PetitionSigs.Add(await MainClient.SignPetitionAsync(new PetitionSig { PetitionId = p.PetitionId, UserId = petitions.User.Id }, authService.headers))" class="btn btn-info-fill ms-auto">
+                            <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" @onclick="async () => petitions.PetitionSigs.Remove(await MainClient.UnsignPetitionAsync(uSig, authService.headers))" class="btn btn-danger-fill ms-auto">
+                            <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool render = false;
+
+    private SharedUser user = new();
+
+    private PetitionsPageModel petitions = new();
+    private PetitionModel petition = new();
+
+    private List<PetitionModel> lpetitions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await authService.InitializeAuthenticate();
+
+        petitions = await MainClient.GetPetitionsAsync(new Empty(), authService.headers);
+        lpetitions = petitions.Petitions.ToList();
+        petition.CreatedById = petitions.User.Id;
+
+        render = true;
+        StateHasChanged();
+    }
+
+    private async Task CreatePetition()
+    {
+        petitions.Petitions.Add(await MainClient.CreatePetitionAsync(petition, authService.headers));
+
+        petition = new();
+        petition.CreatedById = petitions.User.Id;
+    }
+}

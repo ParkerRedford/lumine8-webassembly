@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>W:\lumine8-webassembly</_PublishTargetUrl>
+    <History>True|2022-11-28T06:33:48.5534210Z;True|2022-11-28T01:05:12.1037699-05:00;True|2022-11-27T05:59:13.7537342-05:00;True|2022-11-25T09:06:44.3919647-05:00;True|2022-11-25T08:52:05.7244861-05:00;False|2022-11-25T08:50:19.4941211-05:00;True|2022-11-25T08:16:45.6360714-05:00;True|2022-11-25T08:08:24.9103213-05:00;True|2022-11-25T07:52:42.6219128-05:00;True|2022-11-25T07:35:27.3137593-05:00;True|2022-11-25T05:03:22.3962526-05:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

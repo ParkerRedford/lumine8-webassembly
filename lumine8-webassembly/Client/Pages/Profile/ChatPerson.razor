@@ -1,0 +1,157 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<div @ref="element" class="d-flex flex-column mychatbox-chat mx-2 mt-auto p-2">
+    <div class="card-header d-flex flex-row mb-auto">
+        @if (render)
+        {
+            <h3 class="my-auto" style="width: max-content;">@model.User.Name</h3>
+        }
+        <button type="button" @onclick="OnClose" class="btn btn-danger-fill ms-auto">
+            <RadzenIcon Icon="close" Style="display: flex !important;"></RadzenIcon>
+        </button>
+    </div>
+
+    <div @ref="msgsRef" style="overflow: auto;">
+        @if (render)
+        {
+            foreach (var m in messages)
+            {
+                if (m.SenderId == signedInUser.Id)
+                {
+                    <div class="me-2">
+                        <p class="youchat p-1 ms-auto mb-0" style="white-space: pre-line; border-radius: 0.5rem; width: max-content;">@m.Message</p>
+                        <p style="text-align: end; white-space: pre-line;">@m.Date.ToDateTime().ToString("HH:mm")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="me-auto ms-2">
+                        <p class="otherchat p-1 mb-0" style="white-space: pre-line; border-radius: 0.5rem; width: max-content;">@m.Message</p>
+                        <p style="white-space: pre-line;">@m.Date.ToDateTime().ToString("HH:mm")</p>
+                    </div>
+                }
+            }
+        }
+    </div>
+
+    @if (render && isWriting)
+    {
+        <p>@model.User.Name is writing</p>
+    }
+
+    <EditForm Model="message" OnValidSubmit="SendMessage" class="d-flex flex-row">
+        <textarea @ref="textRef" @oninput="(EventArgs) => SetAreaHeight(EventArgs.Value.ToString())" rows="1" @bind="message.Message" class="form-control" style="height: auto;"></textarea>
+        <button type="submit" class="btn btn-success-fill">
+            <RadzenIcon Icon="send" Style="display: flex !important;"></RadzenIcon>
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public string UserId { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+
+    private ElementReference element, msgsRef, divRef, textRef;
+
+    private HubConnection chatHub;
+
+    private bool render = false;
+    private bool isWriting = false;
+
+    private ChatMessage message = new();
+
+    private List<ChatMessage> messages = new();
+
+    ChatPersonModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetChatPersonModelAsync(new UserId { UserId_ = UserId }, authService.headers);
+        messages.AddRange(model.ChatMessages);
+        messages = messages.Distinct().OrderBy(x => x.Date).ToList();
+        message = new ChatMessage { SenderId = signedInUser.Id };
+
+        render = true;
+        StateHasChanged();
+
+        chatHub = new HubConnectionBuilder()
+            .WithAutomaticReconnect()
+            .WithUrl(navigationManager.ToAbsoluteUri($"/chathub"))
+            .Build();
+
+        chatHub.On<ChatMessage>("MessageReceived", async (msg) =>
+        {
+            if (msg.RoomId == model.UserRoom.RoomId)
+            {
+                messages.Add(msg);
+                messages = messages.OrderBy(x => x.Date).ToList();
+                StateHasChanged();
+
+                await JSRuntime.InvokeVoidAsync("setScroll", msgsRef);
+            }
+        });
+
+        chatHub.On<string, bool>("IsWriting", async (RoomId, w) =>
+        {
+            if (RoomId == model.UserRoom.RoomId)
+            {
+                isWriting = w;
+                StateHasChanged();
+            }
+        });
+
+        await JSRuntime.InvokeVoidAsync("setChatSize", element);
+        await JSRuntime.InvokeVoidAsync("setScroll", msgsRef);
+
+        await chatHub.StartAsync();
+        await chatHub.SendAsync("Connect", signedInUser.Id);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        render = false;
+
+        model = await MainClient.GetChatPersonModelAsync(new UserId { UserId_ = UserId }, authService.headers);
+        messages.AddRange(model.ChatMessages);
+        messages = messages.Distinct().OrderBy(x => x.Date).ToList();
+        message = new ChatMessage { SenderId = signedInUser.Id, RoomId = model.UserRoom.RoomId };
+
+        render = true;
+        StateHasChanged();
+
+        await JSRuntime.InvokeVoidAsync("setChatSize", element);
+        await JSRuntime.InvokeVoidAsync("setScroll", msgsRef);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("setChatSize", element);
+            await JSRuntime.InvokeVoidAsync("setScroll", msgsRef);
+        }
+    }
+
+    private async Task SetAreaHeight(string value)
+    {
+        await chatHub.SendAsync("Writing", model.User.Id, model.UserRoom.RoomId, !string.IsNullOrWhiteSpace(value));
+        await JSRuntime.InvokeVoidAsync("setAreaHeight", textRef);
+    }
+
+    async Task SendMessage()
+    {
+        await chatHub.SendAsync("SendMessage", message, signedInUser.Id, model.User.Id);
+        message = new ChatMessage { SenderId = signedInUser.Id, RoomId = model.UserRoom.RoomId };
+    }
+
+    private async Task OnClose()
+    {
+        await Close.InvokeAsync();
+    }
+}

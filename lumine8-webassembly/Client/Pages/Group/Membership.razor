@@ -1,0 +1,654 @@
+﻿@page "/g/m/{GroupId}"
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+@inject NavigationManager navigationManager
+@inject EnumToString enumConverter
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+@if(!variables.isDesktop)
+{
+    <style>
+        #roles {
+            margin: 1rem auto !important;
+            width: 90% !important;
+        }
+    </style>
+}
+
+<MyAlert @ref="alert"></MyAlert>
+
+@if (render)
+{
+    <div class="d-flex flex-column w-100">
+        <h2>@model.Group.Name</h2>
+        <nav id="nav" class="m-auto">
+            <ul class="pagination m-2 d-flex flex-row flex-wrap">
+                <li class="page-item m-2" style="width: max-content;">
+                    <a href="g/@(model.Group.GroupId)" class="m-auto page-link">Group Page</a>
+                </li>
+                <li class="page-item m-2" style="width: max-content;">
+                    <a href="g/m/@(model.Group.GroupId)" class="m-auto page-link active">Membership</a>
+                </li>
+                <li class="page-item m-2" style="width: max-content;">
+                    <a href="g/p/@(model.Group.GroupId)" class="m-auto page-link">Pictures</a>
+                </li>
+                @if (model.SignedInUser.Id != model.Owner.Id && model.SignedInUserRole.RoleType != RoleType.NoRole)
+                {
+                    <li class="m-2">
+                        <EditForm Model="model.SignedInUserRole" OnValidSubmit="LeaveGroup">
+                            <button type="submit" class="btn btn-danger">
+                                <RadzenIcon Icon="group_off" Style="display: flex !important;" />
+                            </button>
+                        </EditForm>
+                    </li>
+
+                    async Task LeaveGroup()
+                    {
+                        var lg = await MainClient.LeaveAsync(model.SignedInUserRole, authService.headers);
+                        navigationManager.NavigateTo($"/g/{lg.GroupId}", true);
+                    }
+                }
+                else if (model.SignedInUser.Id == model.Owner.Id)
+                {
+                    <li class="my-2 ms-auto">
+                        <input class="btn btn-secondary" type="button" value="Owner" disabled />
+                    </li>
+                }
+            </ul>
+        </nav>
+
+        <div class="d-flex flex-row flex-wrap m-auto">
+            <!--Send Invites-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.RequestApprovals)
+            {
+
+            }
+
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.SendInvites)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Send Invites</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @onchange="() => bFriends = !bFriends" type="checkbox" id="friendsCheck" checked="@(friends)" />
+                        <label for="friendsCheck">Search friends</label>
+
+                        <input @oninput="(EventArgs) => SearchInvites(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (invites != null)
+                        {
+                            <MyAlert @ref="msgInv"></MyAlert>
+                            foreach (var u in invites)
+                            {
+                                if (u.AllowGroupInvites)
+                                {
+                                    var f = friends.Where(x => x.FriendId == u.Id).FirstOrDefault();
+                                    if (bFriends)
+                                    {
+                                        if (f != null)
+                                        {
+                                            <div class="d-flex flex-row py-1 px-0 w-100" style="border-top: 1px solid white;">
+                                                <PPName UserId="@u.Id"></PPName>
+                                                <EditForm Model="u" OnValidSubmit="Invite" class="w-100">
+                                                    <button class="btn btn-info text-right" type="submit" style="margin-left: auto; margin-right: 0;">
+                                                        <RadzenIcon Icon="send" Style="display: flex !important;" />
+                                                    </button>
+                                                </EditForm>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-row py-1 px-0 w-100" style="border-top: 1px solid white;">
+                                            <PPName UserId="@u.Id"></PPName>
+                                            <EditForm Model="u" OnValidSubmit="Invite" class="w-100">
+                                                <button class="btn btn-info d-flex text-right" type="submit" style="margin-left: auto;">
+                                                    <RadzenIcon Icon="send" Style="display: flex !important;" />
+                                                </button>
+                                            </EditForm>
+                                        </div>
+                                    }
+
+                                    async void Invite()
+                                    {
+                                        var req = new GroupRequest { GroupId = GroupId, UserId = u.Id };
+
+                                        await notifyHub.SendAsync("SendGroupRequest", req);
+                                    }
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                async Task SearchInvites(string value)
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        var resp = await MainClient.SearchInvitesAsync(new SearchInvitesRequest { GroupId = model.Group.GroupId, Value = value });
+                        invites = resp.Users.ToList();
+                    }
+                    else
+                        invites = null;
+                }
+            }
+
+            <!--Promote-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.Permissions)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Promote</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @oninput="(EventArgs) => SearchPromotes(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (promotes != null)
+                        {
+                            <MyAlert @ref="msgPro"></MyAlert>
+                            foreach (var u in promotes)
+                            {
+                                var role = roles.Where(x => x.UserId == u.Id && x.RoleType <= model.SignedInUserRole.RoleType).FirstOrDefault();
+                                <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                                    <PPName UserId="@u.Id"></PPName>
+                                    <EditForm Model="role" OnValidSubmit="Promote" class="d-flex flex-row">
+                                        <InputSelect @bind-Value="role.RoleType" class="form-select">
+                                            @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                            {
+                                <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                            }
+                        </InputSelect>
+                        <input class="btn btn-info ms-auto me-0" type="submit" value="Promote" style="margin-left: auto; margin-right: 0;" />
+                    </EditForm>
+                </div>
+                                async Task Promote()
+                                {
+                                    var pRole = await MainClient.PromoteAsync(role, authService.headers);
+                                    msgPro.InvokeAlert($"{u.Name} is now {pRole.RoleType}", MyAlert.Alerts.Success);
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                @*<div class="position-relative m-2">
+                    <button @onclick="() => bPromote = !bPromote" class="btn btn-secondary">Promote</button>
+                    @if (bPromote)
+                    {
+                    <div class="position-absolute p-2" style="background-color: white; border: 1px solid lightgrey; width: max-content; z-index: 1;">
+
+                    <input @oninput="(EventArgs) => SearchPromotes(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                    @if (promotes != null)
+                    {
+                    if (!String.IsNullOrWhiteSpace(msgPro))
+                    {
+                    <p class="text-danger">@msgInv</p>
+                    }
+                    foreach (var u in promotes)
+                    {
+                    var role = _groupsContext.Roles.Where(x => x.UserId == u.Id && x.UserId != signedInUser.Id && x.UserId != owner.Id && x.GroupId == GroupId && x.RoleType <= signedInUserRole.RoleType).FirstOrDefault();
+                    if (role != null)
+                    {
+                    <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                    <PPName User="u"></PPName>
+                    <EditForm Model="role" OnValidSubmit="Promote" class="d-flex flex-row">
+                    <InputSelect @bind-Value="role.RoleType" class="form-control">
+                    @foreach (var r in System.Enum.GetValues(typeof(lumine8.Models.Groups.RoleType)))
+                    {
+                    <option value="@r">@r</option>
+                    }
+                    </InputSelect>
+                    <input class="btn btn-info ms-auto me-0" type="submit" value="Promote" style="margin-left: auto; margin-right: 0;" />
+                    </EditForm>
+                    </div>
+                    async Task Promote()
+                    {
+                    _groupsContext.Roles.Update(role);
+                    _groupsContext.SaveChanges();
+
+                    msgPro = $"Update for {u.Name}";
+                    await Task.Delay(3000);
+                    msgPro = "";
+                    }
+                    }
+                    }
+                    }
+                    </div>
+                    }
+                    </div>*@
+                void SearchPromotes(string value)
+                {
+                    promotes = suMembers.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+                }
+            }
+
+            <!--Promote Lite-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.PermissionsOneBelow)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Promote Lite</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @oninput="(EventArgs) => SearchPromoteLites(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (promoteLites != null)
+                        {
+                            <MyAlert @ref="msgLite"></MyAlert>
+                            foreach (var u in promoteLites)
+                            {
+                                var role = roles.Where(x => x.UserId == u.Id && x.RoleType < model.SignedInUserRole.RoleType).FirstOrDefault();
+                                <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                                    <PPName UserId="@u.Id"></PPName>
+                                    <EditForm Model="role" OnValidSubmit="PromoteLite" class="d-flex flex-row">
+                                        <InputSelect @bind-Value="role.RoleType" class="form-select">
+                                            @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                            {
+                                <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                            }
+                        </InputSelect>
+                        <input class="btn btn-info" type="submit" value="Promote" style="margin-left: auto; margin-right: 0;" />
+                    </EditForm>
+                </div>
+                                async Task PromoteLite()
+                                {
+                                    var pRole = await MainClient.PromoteLiteAsync(role, authService.headers);
+                                    msgPro.InvokeAlert($"{u.Name} is now {pRole.RoleType}", MyAlert.Alerts.Success);
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                void SearchPromoteLites(string value)
+                {
+                    promoteLites = suMembers.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+                }
+            }
+
+            <!--RemoveMember-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.RemoveMember)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Remove Member</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @oninput="(EventArgs) => SearchRemove(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (removes != null)
+                        {
+                            foreach (var u in removes)
+                            {
+                                var role = roles.Where(x => x.UserId == u.Id && x.RoleType <= model.SignedInUserRole.RoleType).FirstOrDefault();
+                                <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                                    <PPName UserId="@u.Id"></PPName>
+                                    <EditForm Model="role" OnValidSubmit="RemoveMember" class="w-100">
+                                        <input class="btn btn-info text-right" type="submit" value="Remove" style="margin-left: auto; margin-right: 0;" />
+                                    </EditForm>
+                                </div>
+                                async Task RemoveMember()
+                                {
+                                    var rr = await MainClient.RemoveMemberAsync(role, authService.headers);
+                                    var r = roles.Where(x => x.RoleId == rr.RoleId).FirstOrDefault();
+                                    var re = removes.Where(x => x.Id == rr.UserId).FirstOrDefault();
+                                    roles.Remove(r);
+                                    removes.Remove(re);
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                void SearchRemove(string value)
+                {
+                    removes = suMembers.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+                }
+            }
+
+            <!--Ban-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.Ban)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Ban</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @oninput="(EventArgs) => SearchBan(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (suBans != null)
+                        {
+                            foreach (var u in suBans)
+                            {
+                                var role = roles.Where(x => x.UserId == u.Id && x.RoleType <= model.SignedInUserRole.RoleType).FirstOrDefault();
+                                <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                                    <PPName UserId="@u.Id"></PPName>
+                                    <input @onclick="Ban" class="btn btn-info text-right" type="button" value="Ban" style="margin-left: auto; margin-right: 0;" />
+                                </div>
+                                async Task Ban()
+                                {
+                                    var br = await MainClient.BanUserAsync(role, authService.headers);
+                                    roles.Remove(br);
+                                    bans.Add(new Ban { UserId = u.Id, GroupId = GroupId });
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                async Task SearchBan(string value)
+                {
+                    var sb = await MainClient.SearchBanAsync(new SearchBanRequest { GroupId = model.Group.GroupId, Value = value });
+                    suBans = sb.Users.ToList();
+                }
+            }
+
+            <!--Remove Ban-->
+            @if (model.SignedInUserRole.RoleType >= model.SectionRoles.RemoveBan)
+            {
+                <MyDropdown Class="m-2" ButtonClass="btn btn-primary" ContentStyle="background-color: white; border: 1px solid lightgrey;">
+                    <ButtonFragment>
+                        <p class="m-0">Remove Ban</p>
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <input @oninput="(EventArgs) => SearchRemoveBan(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Press enter to search" />
+
+                        @if (rmBans != null)
+                        {
+                            foreach (var u in rmBans)
+                            {
+                                var b = bans.Where(x => u.UserId == u.UserId).FirstOrDefault();
+                                <div class="d-flex flex-row py-1 px-0" style="border-top: 1px solid white;">
+                                    <PPName UserId="@u.UserId"></PPName>
+                                    <EditForm Model="b" OnValidSubmit="RemoveBan" class="w-100">
+                                        <input class="btn btn-info text-right" type="submit" value="Remove Ban" style="margin-left: auto; margin-right: 0;" />
+                                    </EditForm>
+                                </div>
+                                async Task RemoveBan()
+                                {
+                                    var rb = await MainClient.RemoveBanAsync(b, authService.headers);
+                                    var lb = bans.Where(x => x.BanId == rb.BanId).FirstOrDefault();
+                                    var rmb = rmBans.Where(x => x.BanId == rb.BanId).FirstOrDefault();
+                                    bans.Remove(lb);
+                                    rmBans.Remove(rmb);
+                                }
+                            }
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+
+                void SearchRemoveBan(string value)
+                {
+                    rmBans = lBans.Where(x => suMembers.Any(y => y.Name.ToLower().Contains(value.ToLower()) && y.Id == x.UserId)).ToList();
+                }
+            }
+
+            <!--Roles-->
+            @if (model.Owner.Id == model.SignedInUser.Id || model.SignedInUserRole.RoleType == RoleType.Owner)
+            {
+                <button @onclick="() => bRoles = !bRoles" class="btn btn-info m-2">
+                    Roles
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (bRoles)
+    {
+        <div class="p-1 w-100" style="position: fixed; top: 0; left: 0; overflow: auto; height: 100%; z-index: 100;">
+            <div class="p-2" id="roles" style="background-color: white; border: 1px solid lightblue; margin: 10% auto; width: 15%; box-shadow: 0px 0px 1px 5000px rgba(0,0,0,0.8);">
+                <div class="d-flex flex-row">
+                    <h3>Roles</h3>
+                    <button type="button" @onclick="() => bRoles = false" class="btn btn-danger ms-auto">
+                        <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                    </button>
+                </div>
+                <div class="d-flex flex-row">
+                    <EditForm Model="model.SectionRoles" OnValidSubmit="UpdateSections" class="w-100">
+                        <div class="my-3">
+                            <label for="description">Description</label>
+                            <InputSelect @bind-Value="model.SectionRoles.Description" class="form-select" id="description">
+                                @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="rmMember">Remove Member</label>
+                    <InputSelect @bind-Value="model.SectionRoles.RemoveMember" class="form-select" id="rmMember">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="bam">Ban</label>
+                    <InputSelect @bind-Value="model.SectionRoles.Ban" class="form-select" id="ban">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="rmBan">Remove Ban</label>
+                    <InputSelect @bind-Value="model.SectionRoles.RemoveBan" class="form-select" id="rmBan">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="promote">Promote</label>
+                    <InputSelect @bind-Value="model.SectionRoles.Permissions" class="form-select" id="promote">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="promoteLite">Promote Lite</label>
+                    <InputSelect @bind-Value="model.SectionRoles.PermissionsOneBelow" class="form-select" id="promoteLite">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="sendInvites">Send Invites</label>
+                    <InputSelect @bind-Value="model.SectionRoles.SendInvites" class="form-select" id="sendInvites">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="seeLumine">See lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.SeeLumine" class="form-select" id="seeLumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="reqLumine">Request lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.RequestLumine" class="form-select" id="reqLumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="postLumine">Post lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.PostLumine" class="form-select" id="postLumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="rmsumine">Remove lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.RemoveLumine" class="form-select" id="rmsumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="shareLumine">Share lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.ShareLumine" class="form-select" id="shareLumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="approveLumine">Approve lumine8s</label>
+                    <InputSelect @bind-Value="model.SectionRoles.CheckLumine" class="form-select" id="approveLumine">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="pictures">See Pictures</label>
+                    <InputSelect @bind-Value="model.SectionRoles.Pictures" class="form-select" id="pictures">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="rmPicture">Remove Pictures</label>
+                    <InputSelect @bind-Value="model.SectionRoles.RemovePictures" class="form-select" id="rmPictures">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="updatePicture">Update Pictures</label>
+                    <InputSelect @bind-Value="model.SectionRoles.UpdatePictures" class="form-select" id="updatePictures">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="upPicture">Upload Pictures</label>
+                    <InputSelect @bind-Value="model.SectionRoles.UploadPictures" class="form-select" id="upPicture">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+                <div class="my-3">
+                    <label for="hashtags">Modify Hashtags</label>
+                    <InputSelect @bind-Value="model.SectionRoles.Hashtags" class="form-select" id="hashtags">
+                        @foreach (var r in System.Enum.GetValues(typeof(RoleType)))
+                                {
+                            <option value="@r">@enumConverter.ToRoleType((RoleType)r)</option>
+                                }
+                    </InputSelect>
+                </div>
+
+                <button type="submit" class="btn btn-success mt-4 float-right">
+                    <RadzenIcon Icon="save" Style="display: flex !important;" />
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+        async Task UpdateSections()
+        {
+            await MainClient.UpdateSectionRolesAsync(model.SectionRoles);
+            alert.InvokeAlert($"Roles has been updated: {DateTime.Now}", MyAlert.Alerts.Success);
+            bRoles = false;
+        }
+    }
+}
+
+@code {
+    [Parameter] public string GroupId { get; set; }
+
+    private bool render = false;
+
+    private MyAlert alert;
+
+    private List<Role> roles = new();
+
+    private string sInvite = "", sPromote = "", sPromoteLite = "", sRemove = "", sBan = "", sRmBan = "";
+    private bool bInvite = false, bPromote = false, bPromoteLite, bRemove = false, bBan = false, bRmBan, bRoles = false;
+
+    private List<SharedUser> invites, promotes, promoteLites, suMembers;
+    private List<SharedUser> removes = new();
+    private List<Ban> bans = new(), lBans = new(), rmBans = new();
+
+    private List<SharedUser> suBans = new();
+
+    private MyAlert msg, msgInv, msgPro, msgLite;
+
+    private bool bFriends = true;
+    private IQueryable<FriendDuo> friends;
+
+    HubConnection notifyHub;
+    MembershipModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetMembershipModelAsync(new GroupId { GroupId_ = GroupId }, authService.headers);
+        bans = model.Bans.ToList();
+        lBans = model.Bans.ToList();
+        roles = model.Roles.ToList();
+        suMembers = model.Members.ToList();
+        friends = model.Friends.AsQueryable();
+
+        if (string.IsNullOrWhiteSpace(model.SignedInUserRole.RoleId))
+            navigationManager.NavigateTo("404");
+
+        render = true;
+        StateHasChanged();
+
+        notifyHub = new HubConnectionBuilder()
+    .WithAutomaticReconnect()
+    .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/notify"))
+    .Build();
+
+        notifyHub.On<string>("GroupRequestSentCaller", (name) =>
+        {
+            alert.InvokeAlert($"Request sent to {name}", MyAlert.Alerts.Success);
+            StateHasChanged();
+        });
+
+        await notifyHub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 Membership - Group: {model.Group.Name}");
+    }
+}
