@@ -173,9 +173,11 @@ function loadVideo3(base64, contentType, video) {
     video.src = dataUrl;
 }
 
-/*function setVWidth(list, videos) {
-    let vs = document.getElementsByClassName("grid-item");
-    vs.forEach(el => el.style.width = ((document.documentElement.clientWidth - el.clientWidth) / 25) + "px");
-
-    //videos.style.width = (document.documentElement.clientWidth - list.clientWidth) + "px";
-}*/
+function saveAsFile(filename, bytesBase64) {
+    var link = document.createElement('a');
+    link.download = filename;
+    link.href = "data:application/octet-stream;base64," + bytesBase64;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}

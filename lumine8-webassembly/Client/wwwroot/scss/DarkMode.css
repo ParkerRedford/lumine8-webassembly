@@ -45,7 +45,7 @@ input:disabled, button:disabled {
   background-color: #505050;
 }
 
-p, label, summary, details, h3, span, input[type=file], .nav-link {
+p, label, summary, details, h1, h2, h3, h4, span, input[type=file], .nav-link {
   color: white !important;
 }
 

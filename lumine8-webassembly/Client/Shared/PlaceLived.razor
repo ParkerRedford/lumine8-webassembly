@@ -1,6 +1,8 @@
 ﻿@inject MainProto.MainProtoClient MainClient
 @inject NavigationManager navigationManager
 
+@inject AuthenticationService authService
+
 <style>
     .form-group {
         background-color: initial !important;
@@ -32,7 +34,7 @@
             LocationInfo info = locationInfos.Where(x => x.PlaceLivedId == p.Key.PlaceLivedId).FirstOrDefault();
 
             List<string> guids = new();
-            for (int k = 0; 7 >= k; k++)
+            for (int k = 0; 8 >= k; k++)
                 guids.Add(Guid.NewGuid().ToString());
 
             var to = p.Key.To.ToDateTime();
@@ -46,9 +48,19 @@
                             <RadzenIcon Icon="delete" Style="display: flex !important;" />
                         </button>
 
+                        <button type="button" @onclick="SelectForPetition" class="btn btn-info" style="width: max-content;">
+                            <RadzenIcon Icon="done" Style="display: flex !important;" />
+                        </button>
+
+                        async Task SelectForPetition()
+                        {
+                            await MainClient.UpdateAddressForPetitionAsync(p.Key, authService.headers);
+                            alerts[j].InvokeAlert("You have selected this address for petitioning", MyAlert.Alerts.Info, true);
+                        }
+
                         async Task DeleteLived()
                         {
-                            placesLived.Remove(await MainClient.DeletePlaceAsync(p.Key));
+                            placesLived.Remove(await MainClient.DeletePlaceAsync(p.Key, authService.headers));
                             alerts.Remove(alerts[j]);
                         }
                     }
@@ -65,12 +77,14 @@
                             <select id="@guids[0]" @bind="p.Key.CountryId" @oninput="GetStates" class="form-select">
                                 @foreach (var c in model.Countries)
                                 {
-                                    <option value="@c.Id">@(c.Name)</option>
+                                    <option @key="c.Id" value="@c.Id">@(c.Name)</option>
                                 }
                             </select>
 
                             async Task GetStates(ChangeEventArgs e)
                             {
+                                p.Key.CountryId = int.Parse(e.Value.ToString());
+
                                 var sid = await MainClient.GetStatesAsync(new IdNumber { Id = int.Parse(e.Value.ToString()) });
                                 info.cities.Clear();
                                 info.states = sid.States.ToList();
@@ -98,6 +112,8 @@
 
                             async Task GetCities(ChangeEventArgs e)
                             {
+                                p.Key.StateId = int.Parse(e.Value.ToString());
+
                                 var sid = await MainClient.GetCitiesAsync(new IdNumber { Id = int.Parse(e.Value.ToString()) });
                                 info.cities = sid.Cities.ToList();
 
@@ -123,43 +139,55 @@
                             </InputSelect>
                         }
                     </div>
+                    
                     <div class="list-group form-group">
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[3]">Street Name</label>
+                            @if (disable)
+                            {
+                                <p>@p.Key.StreetName</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[3]" class="form-control" @bind-Value="p.Key.StreetName"></InputText>
+                            }
+                        </div>
                         <div class="list-group-item d-flex flex-column" style="border-radius: 1rem 1rem 0 0;">
-                            <label for="@guids[3]">County</label>
+                            <label for="@guids[4]">County</label>
                             @if (disable)
                             {
                                 <p>@p.Key.County</p>
                             }
                             else
                             {
-                                <InputText id="@guids[3]" class="form-control" @bind-Value="@p.Key.County"></InputText>
+                                <InputText id="@guids[4]" class="form-control" @bind-Value="@p.Key.County"></InputText>
                             }
                         </div>
 
                         <div class="list-group-item d-flex flex-column" style="border-radius: 0 0 1rem 1rem;">
-                            <label for="@guids[4]">Postal Code</label>
+                            <label for="@guids[5]">Postal Code</label>
                             @if (disable)
                             {
                                 <p>@p.Key.PostalCode</p>
                             }
                             else
                             {
-                                <InputText id="@guids[4]" class="form-control" @bind-Value="@p.Key.PostalCode" disabled="@disable">@p.Key.PostalCode</InputText>
+                                <InputText id="@guids[5]" class="form-control" @bind-Value="@p.Key.PostalCode" disabled="@disable">@p.Key.PostalCode</InputText>
                             }
                         </div>
                     </div>
                     <div class="card-columns d-flex mt-2">
                         <div>
-                            <label for="@guids[5]">From</label>
-                            <InputDate id="@guids[5]" class="form-control" @bind-Value="to" disabled="@disable"></InputDate>
+                            <label for="@guids[6]">From</label>
+                            <InputDate id="@guids[6]" class="form-control" @bind-Value="to" disabled="@disable"></InputDate>
                         </div>
                         <div>
-                            <label for="@guids[6]">To</label>
-                            <InputDate id="@guids[6]" class="form-control" @bind-Value="from" disabled="@(disable || p.Key.Current)"></InputDate>
+                            <label for="@guids[7]">To</label>
+                            <InputDate id="@guids[7]" class="form-control" @bind-Value="from" disabled="@(disable || p.Key.Current)"></InputDate>
                         </div>
                         <div>
-                            <label for="@guids[7]">Current</label>
-                            <InputCheckbox id="@guids[7]" @bind-Value="p.Key.Current" class="form-control" disabled="@disable"></InputCheckbox>
+                            <label for="@guids[8]">Current</label>
+                            <InputCheckbox id="@guids[8]" @bind-Value="p.Key.Current" class="form-control" disabled="@disable"></InputCheckbox>
                         </div>
                     </div>
                     @if (!disable)
@@ -178,7 +206,7 @@
                 p.Key.To = Timestamp.FromDateTime(to);
                 p.Key.From = Timestamp.FromDateTime(from);
 
-                await MainClient.UpdatePlaceAsync(p.Key);
+                await MainClient.UpdatePlaceAsync(p.Key, authService.headers);
                 alerts[j].InvokeAlert($"Updated", MyAlert.Alerts.Success, true);
             }
         }

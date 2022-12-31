@@ -211,16 +211,23 @@ service MainProto {
 
 	//Petition
 	rpc GetPetitions (google.protobuf.Empty) returns (PetitionsPageModel);
+	rpc GetPetition (Id) returns (PetitionPageModel);
 	rpc CreatePetition (PetitionModel) returns (PetitionModel);
 	rpc DeletePetition (PetitionModel) returns (PetitionModel);
 	rpc SignPetition (PetitionSig) returns (PetitionSig);
 	rpc UnsignPetition (PetitionSig) returns (PetitionSig);
+	rpc UpdateAddressForPetition (Lived) returns (google.protobuf.Empty);
 
 	//Video
 	rpc GetVideoHomePage (google.protobuf.Empty) returns (VideoHomePage);
+
+	//Payment
+	//rpc MakePayment (MakePaymentRequest) returns (MakePaymentResponse);
 }
 
 /*****Models*****/
+message Void2 {}
+
 message Id {
 	string Id = 1;
 }
@@ -256,9 +263,10 @@ message ApplicationUser {
 	int32 HoursFeed = 9;
 
 	string PublicKey = 10;
+	//google.protobuf.Timestamp LastPayment = 11;
 
 	//Child
-	/*repeated Token Tokens = 13;
+	/* Token Tokens = 13;
 	repeated FriendDuo FriendDuos = 14;
 	repeated Request Requests = 15;
 	repeated GroupModel GroupModels = 16;
@@ -295,7 +303,10 @@ message ApplicationUser {
 	repeated TagsFeed TagsFeeds = 47;
 	repeated Notification Notifications = 48;
 	repeated UserRoom UserRooms = 49;
-	repeated ChatMessage ChatMessages = 50;*/
+	repeated ChatMessage ChatMessages = 50;
+	repeated PetitionModel Petitions = 51;
+	repeated PetitionAddress PetitionAddresses = 52;
+	repeated PetitionComment = 53;*/
 }
 
 message LoginUser {
@@ -613,13 +624,17 @@ message Message {
 	Room Room = 8;
 
 	//Child
-	repeated Like Likes = 11;*/
+	repeated Like Likes = 11;
+	repeated RoomToMessage RoomToMessages = 12;*/
 }
 
 message MessageOnMessage {
     optional string MessageOnMessageId = 1;
     string MessageId = 2;
     string MessageOnId = 3;
+
+	//Parent
+	//Message Message = 4;
 }
 
 message MessageHashtag {
@@ -822,13 +837,16 @@ message Lived {
     int32 StateId = 4;
     int32 CityId = 5;
     string County = 6;
-    string PostalCode = 7;
-    google.protobuf.Timestamp From = 8;
-    google.protobuf.Timestamp To = 9;
-    bool Current = 10;
+	string StreetName =7;
+    string PostalCode = 8;
+    google.protobuf.Timestamp From = 9;
+    google.protobuf.Timestamp To = 10;
+    bool Current = 11;
 
 	//Parent
-	//ApplicationUser ApplicationUser = 11;
+	//ApplicationUser ApplicationUser = 12;
+	//Child
+	//repeated PetitionAddress PetitionAddresses = 13;
 }
 
 message MainPicture {
@@ -1034,11 +1052,11 @@ message Image {
     google.protobuf.Timestamp UploadDate = 6;
 
 	//Parent
-	/*ApplicationUser ApplicationUser = 7;
-	ImageRoom ImageRoom = 8;
+	//ApplicationUser ApplicationUser = 7;
+	//ImageRoom ImageRoom = 8;
 
 	//Child
-	repeated UserComment UserComments = 9;*/
+	//repeated UserComment UserComments = 9;
 }
 
 message TagsFeed {
@@ -1105,33 +1123,79 @@ message Country {
     string Sortname = 2;
     string Name = 3;
     int32 PhoneCode = 4;
+
+	//Child
+	//repeated State States = 5;
 }
 
 message State {
     int32 Id = 1;
     string Name = 2;
     int32 CountryId = 3;
+
+	//Parent
+	//Country Country = 4;
+	//Child
+	//repeated City Cities = 5;
 }
 
 message City {
     int32 Id = 1;
     string Name = 2;
     int32 StateId = 3;
+
+	//Parent
+	//State State = 4;
 }
 
+//Petitions
 message PetitionModel {
 	optional string PetitionId = 1;
 	string CreatedById = 2;
 	string Petition = 3;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 4;
+
+	//Child
+	//repeated PetitionSig PetitionSigs = 5;
+	//repeated PetitionComment = 6;
 }
 
 message PetitionSig {
 	optional string PetitionSigId = 1;
 	string UserId = 2;
 	string PetitionId = 3;
+
+	//Parent
+	//PetitionModel Petition = 4;
+}
+
+message PetitionAddress {
+	optional string UserId = 1;
+	string LivedId = 2;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 3;
+	//Lived Lived = 4;
+}
+
+message PetitionComment {
+	optional string PeitionCommentId = 1;
+	string UserId = 2;
+	string Comment = 3;
+	string PetitionId = 4;
+
+	//Parent
+	//ApplicationUser ApplicationUser = 5;
+	//PetitionModel Petition = 6;
 }
 
 /*****Identity*****/
+message Boolean2 {
+	bool Bool = 1;
+}
+
 message UserId {
 	string UserId = 1;
 }
@@ -1660,15 +1724,27 @@ message AboutPageModel {
 	repeated PrivateProfile PrivateProfiles = 4;
 }
 
+//Petitions
 message CreatePetition {
 	string UserId = 1;
 	string Petition = 2;
 }
 
 message PetitionsPageModel {
-	SharedUser user = 1;
+	SharedUser User = 1;
 	repeated PetitionModel Petitions = 2;
 	repeated PetitionSig PetitionSigs = 3;
+	repeated SharedUser Users = 4;
+	Lived Lived = 5;
+	Country Country = 6;
+	State State = 7;
+	City City = 8;
+}
+
+message PetitionPageModel {
+	SharedUser User = 1;
+	PetitionModel Petition = 2;
+	repeated PetitionSig Sigs = 3;
 	repeated SharedUser Users = 4;
 }
 
@@ -1676,3 +1752,11 @@ message VideoHomePage {
 	repeated Video videos = 1;
 	repeated VideoLike likes = 2;
 }
+
+/*message MakePaymentRequest {
+	SharedUser User = 1;
+}
+
+message MakePaymentResponse {
+
+}*/

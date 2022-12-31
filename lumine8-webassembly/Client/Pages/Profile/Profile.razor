@@ -536,23 +536,29 @@
                 {
                     <Interests User="model.User" disable="!isMod" signedInUser="model.SignedInUser"></Interests>
                 }
-            </div>
 
-            <!--Petitions-->
-            @*<div class="card">
-                <h5 class="card-header d-flex">
-                    <span class="my-auto me-1">Petition</span>
-                </h5>
-                <div>
-                    @foreach(var p in model.Petitions)
-                    {
-                        <div class="d-flex flex-row">
-                            <p>@p.Petition</p>
-                            <p>@p.</p>
+                <!--Petitions-->
+                <div class="card">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">Petitions</span>
+                    </h5>
+                    <details class="m-2">
+                        <summary>Detail</summary>
+                        <div class="p-2">
+                            @foreach (var p in model.Petitions)
+                            {
+                                <div>
+                                    <p class="m-0">@p.Petition</p>
+                                    <a class="m-0" href="/petition/@p.PetitionId">Link</a>
+                                    <hr class="my-2" />
+                                </div>
+                            }
                         </div>
-                    }
+                    </details>
+
+                    
                 </div>
-            </div>*@
+            </div>
         </Settings>
         <!--LUMINE8-->
         <Feed>
@@ -854,17 +860,17 @@
     {
         mainHub = new HubConnectionBuilder()
             .WithAutomaticReconnect()
-            .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/mainhub"))
+            .WithUrl(navigationManager.ToAbsoluteUri($"/mainhub"))
             .Build();
 
         notifyHub = new HubConnectionBuilder()
         .WithAutomaticReconnect()
-        .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/notify"))
+        .WithUrl(navigationManager.ToAbsoluteUri($"/notify"))
         .Build();
 
         chatHub = new HubConnectionBuilder()
         .WithAutomaticReconnect()
-        .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/chathub"))
+        .WithUrl(navigationManager.ToAbsoluteUri($"/chathub"))
         .Build();
 
         await mainHub.StartAsync();

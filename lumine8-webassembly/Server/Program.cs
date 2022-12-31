@@ -4,14 +4,15 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using lumine8_GrpcService;
 using lumine8.Server.Data;
-using lumine8.Server.Services;
 using lumine8.Server.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
 builder.Services.AddGrpc();
 
 if (OperatingSystem.IsLinux())
@@ -31,19 +32,14 @@ builder.Services.AddServerSideBlazor().AddHubOptions(o =>
     o.MaximumReceiveMessageSize = null;
 });
 
-builder.Services.AddServerSideBlazor().AddHubOptions(o =>
-{
-    o.MaximumReceiveMessageSize = null;
-});
-
 builder.Services.AddSignalR(o =>
 {
     o.EnableDetailedErrors = true;
     o.MaximumReceiveMessageSize = null;
 });
 
-builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
+//builder.Services.AddControllersWithViews();
+//builder.Services.AddRazorPages();
 
 builder.Services.AddCors(o =>
 {
@@ -51,7 +47,8 @@ builder.Services.AddCors(o =>
     {
         builder
         .AllowAnyMethod()
-        .AllowAnyHeader();
+        .AllowAnyHeader()
+        .AllowAnyOrigin();
     });
 });
 
@@ -65,6 +62,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.AddTransient<ApplicationDbContext>();
+
 builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
 );
@@ -73,7 +72,7 @@ builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
 var app = builder.Build();
 
-app.UseResponseCompression();
+//app.UseResponseCompression();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

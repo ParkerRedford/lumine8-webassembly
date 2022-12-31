@@ -305,7 +305,7 @@
         else
         {
             index = await MainClient.GetIndexModelAsync(new Empty(), authService.headers);
-            
+
             this.lFriends = index.Friends.ToList();
             this.lsuFriends = index.SuFriends.ToList();
             this.lgroups = index.Groups.AsQueryable();

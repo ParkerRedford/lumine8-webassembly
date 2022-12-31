@@ -4,6 +4,9 @@
     button {
         border-radius: 0 !important;
         opacity: 1 !important;
+        padding: 1rem;
+        border: none;
+        border-top: 1px solid lightgrey;
     }
 </style>
 
@@ -21,10 +24,10 @@
     </div>
 
     <div class="d-flex flex-row" style="position: fixed; bottom: 0; left: 0; width: 100%;">
-        <button class="w-100" type="button" @onclick="SettingsIndex" style="background-color: @SettingsColor">
+        <button class="w-100" type="button" @onclick="SettingsIndex" style="background-color: @SettingsColor; border-radius: 0.75rem 0 0 0 !important;">
             <RadzenIcon Icon="contact_page" Style="display: flex !important; margin: auto;" />
         </button>
-        <button class="w-100" type="button" @onclick="FeedIndex" style="background-color: @FeedColor">
+        <button class="w-100" type="button" @onclick="FeedIndex" style="background-color: @FeedColor; border-radius: 0 0.75rem 0 0 !important;">
             <RadzenIcon Icon="view_list" Style="display: flex !important; margin: auto;" />
         </button>
     </div>

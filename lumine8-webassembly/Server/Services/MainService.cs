@@ -10,15 +10,16 @@ using Nethereum.HdWallet;
 using lumine8_GrpcService;
 using Image = lumine8_GrpcService.Image;
 using Share = lumine8_GrpcService.Share;
+using Microsoft.EntityFrameworkCore;
 
-namespace lumine8.Server.Services
+namespace Services
 {
     public class MainService : MainProto.MainProtoBase
     {
         private readonly ApplicationDbContext applicationDbContext;
-        private readonly string rootPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) 
+        private readonly string rootPath = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
             ? Path.Combine(Path.DirectorySeparatorChar.ToString(), "var", "www", "lumine8.com", "wwwroot", "p") : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "p");
-        public MainService(ApplicationDbContext applicationDbContext) 
+        public MainService(ApplicationDbContext applicationDbContext)
         {
             this.applicationDbContext = applicationDbContext;
         }
@@ -34,12 +35,35 @@ namespace lumine8.Server.Services
                 return GetSharedUser();
         }
 
+        /*public override Task<MakePaymentResponse> MakePayment(MakePaymentRequest request, ServerCallContext context)
+        {
+            var u = applicationDbContext.Users.Find(request.User.Id);
+            //var u = applicationDbContext.Users.Where(x => x.Id == request.User.Id).FirstOrDefault();
+            if (!Authorize(context, u.Username))
+                throw new UnauthorizedAccessException();
+
+            u.LastPayment = Timestamp.FromDateTime(DateTime.UtcNow);
+            applicationDbContext.Users.Update(u);
+            applicationDbContext.SaveChanges();
+
+            return Task.FromResult(new MakePaymentResponse());
+        }*/
+
         public bool Authorize(ServerCallContext context, string Username)
         {
             var privateKey = context.GetHttpContext().Request.Headers["PrivateKey"].FirstOrDefault();
             var acc = new Nethereum.Web3.Accounts.Account(privateKey);
-            return (applicationDbContext.Users.Where(x => x.Username == Username && x.PublicKey == acc.PublicKey).FirstOrDefault() != null);
+            return applicationDbContext.Users.Where(x => x.Username == Username && x.PublicKey == acc.PublicKey).FirstOrDefault() != null;
         }
+
+        /*public bool bVerified(string UserId)
+        {
+            var u = applicationDbContext.Users.Where(x => x.Id == UserId).FirstOrDefault();
+            if (DateTime.UtcNow.AddYears(1) > u.LastPayment.ToDateTime())
+                return true;
+            else
+                return false;
+        }*/
 
         public SharedUser GetSharedUser(string Username = "", string Id = "")
         {
@@ -66,7 +90,7 @@ namespace lumine8.Server.Services
 
         public override Task<BoolValue> CheckVersion(Id id, ServerCallContext context)
         {
-            return Task.FromResult(new BoolValue { Value = ("3d9ca813-6f37-40f9-8735-95e2257f0f6a" == id.Id_) });
+            return Task.FromResult(new BoolValue { Value = "3d9ca813-6f37-40f9-8735-95e2257f0f6a" == id.Id_ });
         }
 
         public override Task<Authenticated> Authenticate(LoginUser loginUser, ServerCallContext context)
@@ -74,7 +98,7 @@ namespace lumine8.Server.Services
             var acc = new Nethereum.Web3.Accounts.Account(loginUser.PrivateKey);
             var u = applicationDbContext.Users.Where(x => x.Username == loginUser.Username && x.PublicKey == acc.PublicKey).FirstOrDefault();
 
-            return Task.FromResult(new Authenticated { IsAuthenticated = (u != null) });
+            return Task.FromResult(new Authenticated { IsAuthenticated = u != null });
         }
 
         public override Task<Empty> ChangePassword(LoginUser loginUser, ServerCallContext context)
@@ -175,7 +199,7 @@ namespace lumine8.Server.Services
 
         private void DeleteMessagesUpdate(Message message)
         {
-            var m = applicationDbContext.Messages.Where(x => x.MessageId == message.MessageId).FirstOrDefault();
+            var m = applicationDbContext.Messages.Find(message.MessageId);
             var replies = applicationDbContext.Messages.Where(x => applicationDbContext.MessageOnMessages.Any(y => y.MessageOnId == m.MessageId && x.MessageId == y.MessageId)).ToList();
 
             if (m != null)
@@ -325,7 +349,7 @@ namespace lumine8.Server.Services
 
         public override Task<Empty> UpdateAboutMe(AboutMe aboutMe, ServerCallContext context)
         {
-            var user = applicationDbContext.Users.Where(x => x.Id == aboutMe.UserId).FirstOrDefault();
+            var user = applicationDbContext.Users.Find(aboutMe.UserId);
 
             if (!Authorize(context, user.Username))
                 throw new UnauthorizedAccessException();
@@ -351,7 +375,7 @@ namespace lumine8.Server.Services
 
         public override Task<Image> DeleteCategory(Image img, ServerCallContext context)
         {
-            var limg = applicationDbContext.Images.Where(x => x.ImageId == img.ImageId).FirstOrDefault();
+            var limg = applicationDbContext.Images.Find(img.ImageId);
             var imgs = applicationDbContext.Images.Where(x => x.Category == limg.Category && x.ImageId == limg.ImageId).ToList();
 
             if (imgs.Count() == 1)
@@ -455,9 +479,9 @@ namespace lumine8.Server.Services
 
             var links = applicationDbContext.Links.Where(x => x.UserId == user.Id).ToList();
 
-            var profileSecurity = applicationDbContext.ProfileSecurities.Where(x => x.UserId == user.Id).FirstOrDefault();
+            var profileSecurity = applicationDbContext.ProfileSecurities.Find(user.Id);
             var privateProfile = applicationDbContext.PrivateProfiles.Where(x => x.UserId == user.Id).ToList();
-            var aboutMe = applicationDbContext.AboutMe.Where(x => x.UserId == user.Id).FirstOrDefault();
+            var aboutMe = applicationDbContext.AboutMe.Find(user.Id);
 
             if (aboutMe == null)
             {
@@ -503,16 +527,14 @@ namespace lumine8.Server.Services
 
             var myFriends = applicationDbContext.Friends.Where(x => x.UserId == signedInUser.Id).Select(x => x.FriendId);
             var mutualFriends = friends.Select(x => x.FriendId).Intersect(myFriends).ToList();
+
             var suFriends = new List<SharedUser>();
-            foreach (var f in friends)
-                suFriends.Add(GetSharedUser(Id: f.FriendId));
+            friends.ForEach(x => suFriends.Add(GetSharedUser(Id: x.FriendId)));
 
             var pp = applicationDbContext.ProfilePictures.Where(x => x.UserId == user.Id).FirstOrDefault();
             var pps = applicationDbContext.Images.Where(x => x.Category == "Profile Pictures" && x.UserId == signedInUser.Id).ToList();
 
-            var request = applicationDbContext.Requests.Where(x => x.SenderId == user.Id && x.SentToId == signedInUser.Id).FirstOrDefault();
-            if (request == null)
-                request = new Request();
+            var request = applicationDbContext.Requests.Where(x => x.SenderId == user.Id && x.SentToId == signedInUser.Id).FirstOrDefault() ?? new Request();
 
             var petitions = applicationDbContext.Petitions.Where(x => x.CreatedById == user.Id).ToList();
 
@@ -535,7 +557,7 @@ namespace lumine8.Server.Services
 
         public override Task<CreateGroupResponse> CreateGroup(GroupModel group, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == group.OwnerId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(group.OwnerId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -600,7 +622,7 @@ namespace lumine8.Server.Services
 
         public override Task<AddCommentResponse> AddComment(UserComment comment, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == comment.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(comment.UserId);
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
@@ -613,9 +635,9 @@ namespace lumine8.Server.Services
 
         public override Task<UserComment> DeleteComment(UserComment comment, ServerCallContext context)
         {
-            var c = applicationDbContext.UserComments.Where(x => x.UserCommentId == comment.UserCommentId).FirstOrDefault();
+            var c = applicationDbContext.UserComments.Find(comment.UserCommentId);
 
-            var u = applicationDbContext.Users.Where(x => x.Id == c.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(c.UserId);
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
@@ -629,9 +651,9 @@ namespace lumine8.Server.Services
         {
             var signedInUser = GetUserFromRequest(context);
             var users = applicationDbContext.Users.Where(x => x.Id != signedInUser.Id).ToList().Take(100);
+
             var suUsers = new List<SharedUser>();
-            foreach (var u in users)
-                suUsers.Add(GetSharedUser(Id: u.Id));
+            users.ToList().ForEach(x => suUsers.Add(GetSharedUser(Id: x.Id)));
 
             var pps = applicationDbContext.ProfilePictures.AsEnumerable().Where(x => users.Any(y => y.Id == x.UserId)).ToList();
             var images = applicationDbContext.Images.AsEnumerable().Where(x => pps.Any(y => y.ImageId == x.ImageId)).ToList();
@@ -702,9 +724,9 @@ namespace lumine8.Server.Services
             //Education
             if (s.BEducation)
             {
-                s.Education.SchoolName = (!string.IsNullOrWhiteSpace(s.Education.SchoolName)) ? s.Education.SchoolName : "";
-                s.Education.Major = (!string.IsNullOrWhiteSpace(s.Education.Major)) ? s.Education.Major : "";
-                s.Education.Minor = (!string.IsNullOrWhiteSpace(s.Education.Minor)) ? s.Education.Minor : "";
+                s.Education.SchoolName = !string.IsNullOrWhiteSpace(s.Education.SchoolName) ? s.Education.SchoolName : "";
+                s.Education.Major = !string.IsNullOrWhiteSpace(s.Education.Major) ? s.Education.Major : "";
+                s.Education.Minor = !string.IsNullOrWhiteSpace(s.Education.Minor) ? s.Education.Minor : "";
 
                 var educationList = applicationDbContext.EducationList.Where(x =>
                 x.SchoolName.ToLower().Contains(s.Education.SchoolName.ToLower()) &&
@@ -720,8 +742,7 @@ namespace lumine8.Server.Services
             }
 
             var suUsers = new List<SharedUser>();
-            foreach (var u in users)
-                suUsers.Add(GetSharedUser(Id: u.Id));
+            users.ForEach(x => suUsers.Add(GetSharedUser(Id: x.Id)));
 
             var pps = applicationDbContext.ProfilePictures.AsEnumerable().Where(x => users.Any(y => y.Id == x.UserId)).ToList();
             var images = applicationDbContext.Images.AsEnumerable().Where(x => pps.Any(y => y.ImageId == x.ImageId)).ToList();
@@ -762,13 +783,13 @@ namespace lumine8.Server.Services
         public override Task<SecurityPageModel> GetSecurityPageModel(Empty Empty, ServerCallContext context)
         {
             var ur = GetUserFromRequest(context);
-            var profileSecurity = applicationDbContext.ProfileSecurities.Where(x => x.UserId == ur.Id).FirstOrDefault();
+            var profileSecurity = applicationDbContext.ProfileSecurities.Find(ur.Id);
 
             var exceptions = applicationDbContext.PrivateProfiles.Where(x => x.UserId == ur.Id).ToList();
             var uExceptions = applicationDbContext.Users.AsEnumerable().Where(x => exceptions.Any(y => y.UserId == x.Id)).ToList();
+
             var suExceptions = new List<SharedUser>();
-            foreach (var u in uExceptions)
-                suExceptions.Add(GetSharedUser(Id: u.Id));
+            uExceptions.ForEach(x => suExceptions.Add(GetSharedUser(Id: x.Id)));
 
             var friends = applicationDbContext.Friends.Where(x => x.UserId == ur.Id).ToList();
 
@@ -829,9 +850,9 @@ namespace lumine8.Server.Services
         public override Task<PeopleModel> GetPeople(Id id, ServerCallContext context)
         {
             var people = applicationDbContext.Users.Where(x => x.Name.ToLower().Contains(id.Id_.ToLower())).ToList();
+
             var suPeople = new List<SharedUser>();
-            foreach (var u in people)
-                suPeople.Add(GetSharedUser(Id: u.Id));
+            people.ForEach(x => suPeople.Add(GetSharedUser(Id: x.Id)));
 
             var model = new PeopleModel();
             model.Users.AddRange(suPeople);
@@ -841,7 +862,7 @@ namespace lumine8.Server.Services
 
         public override Task<ProfileSecurity> UpdateSecurity(ProfileSecurity profileSecurity, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == profileSecurity.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(profileSecurity.UserId);
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
@@ -853,7 +874,7 @@ namespace lumine8.Server.Services
 
         public override Task<SharedUser> UpdateUserSettings(SharedUser user, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == user.Id).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(user.Id);
             if (!Authorize(context, user.Username))
                 throw new UnauthorizedAccessException();
 
@@ -870,7 +891,7 @@ namespace lumine8.Server.Services
 
         public override Task<Image> DeleteProfilePicture(Image image, ServerCallContext context)
         {
-            var lp = applicationDbContext.Images.Where(x => x.ImageId == image.ImageId).FirstOrDefault();
+            var lp = applicationDbContext.Images.Find(image.ImageId);
 
             var com = applicationDbContext.UserComments.Where(x => x.ImageId == lp.ImageId);
             applicationDbContext.UserComments.RemoveRange(com);
@@ -913,7 +934,7 @@ namespace lumine8.Server.Services
 
         public override Task<FriendDuo> ChangePriority(FriendDuo friend, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == friend.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(friend.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -956,8 +977,8 @@ namespace lumine8.Server.Services
         {
             var u = applicationDbContext.Users.Where(x => x.Id == r.SenderId).FirstOrDefault();
 
-            bool isFriend = (applicationDbContext.Friends.Where(x => x.UserId == r.SenderId && x.FriendId == r.SentToId).FirstOrDefault() == null ||
-                         applicationDbContext.Friends.Where(x => x.UserId == r.SentToId && x.FriendId == r.SenderId).FirstOrDefault() == null);
+            bool isFriend = applicationDbContext.Friends.Where(x => x.UserId == r.SenderId && x.FriendId == r.SentToId).FirstOrDefault() == null ||
+                         applicationDbContext.Friends.Where(x => x.UserId == r.SentToId && x.FriendId == r.SenderId).FirstOrDefault() == null;
 
             if (isFriend)
             {
@@ -973,13 +994,13 @@ namespace lumine8.Server.Services
 
         public override Task<Link> DeleteLink(Link link, ServerCallContext context)
         {
-            var li = applicationDbContext.Links.Where(x => x.LinkId == link.LinkId).FirstOrDefault();
-            var u = applicationDbContext.Users.Where(x => x.Id == link.UserId).FirstOrDefault();
+            var li = applicationDbContext.Links.Find(link.LinkId);
+            var u = applicationDbContext.Users.Find(link.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
-            var l = applicationDbContext.Links.Where(x => x.LinkId == link.LinkId).FirstOrDefault();
+            var l = applicationDbContext.Links.Find(link.LinkId);
             applicationDbContext.Links.Remove(l);
             applicationDbContext.SaveChanges();
 
@@ -988,7 +1009,7 @@ namespace lumine8.Server.Services
 
         public override Task<Link> UpdateLink(Link link, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == link.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(link.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1001,7 +1022,7 @@ namespace lumine8.Server.Services
 
         public override Task<Link> CreateLink(Link link, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == link.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(link.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1032,12 +1053,12 @@ namespace lumine8.Server.Services
 
         public override Task<Image> DeleteImage(Image image, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == image.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(image.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
-            var limg = applicationDbContext.Images.Where(x => x.ImageId == image.ImageId).FirstOrDefault();
+            var limg = applicationDbContext.Images.Find(image.ImageId);
             var imgs = applicationDbContext.Images.Where(x => x.Category == limg.Category);
             if (imgs.Count() == 1)
             {
@@ -1069,7 +1090,7 @@ namespace lumine8.Server.Services
         {
             var signedInUsername = context.GetHttpContext().Request.Headers["Username"].FirstOrDefault();
 
-            var group = applicationDbContext.Groups.Where(x => x.GroupId == id.GroupId_).FirstOrDefault();
+            var group = applicationDbContext.Groups.Find(id.GroupId_);
 
             var signedInUser = GetSharedUser(Username: signedInUsername);
             var signedInUserRole = new Role();
@@ -1102,7 +1123,7 @@ namespace lumine8.Server.Services
                 signedInUserRole = new Role { UserId = signedInUser.Id, RoleType = RoleType.NoRole, GroupId = group.GroupId };
 
             bool security;
-            if (group.Security == lumine8_GrpcService.Security.PrivateSecurity)
+            if (group.Security == Security.PrivateSecurity)
                 security = true;
             else
                 security = false;
@@ -1116,8 +1137,7 @@ namespace lumine8.Server.Services
 
             var suMembersMan = applicationDbContext.Users.Where(x => roles.Any(y => y.UserId == x.Id)).ToList();
             var suMembers = new List<SharedUser>();
-            foreach (var u in suMembersMan)
-                suMembers.Add(GetSharedUser(Id: u.Id));
+            suMembersMan.ForEach(x => suMembers.Add(GetSharedUser(Id: x.Id)));
 
             var model = new GroupPageModel();
             model.Rooms.AddRange(rooms);
@@ -1144,7 +1164,7 @@ namespace lumine8.Server.Services
         public override Task<Role> SetPriority(Role role, ServerCallContext context)
         {
             var u = GetUserFromRequest(context);
-            var g = applicationDbContext.Groups.Where(x => x.GroupId == role.GroupId).FirstOrDefault();
+            var g = applicationDbContext.Groups.Find(role.GroupId);
             if (!Authorize(context, u.Username) && g.OwnerId == u.Id)
                 throw new UnauthorizedAccessException();
 
@@ -1158,16 +1178,16 @@ namespace lumine8.Server.Services
         public override Task<GroupSecurity> SetSecurity(GroupSecurity gs, ServerCallContext context)
         {
             var u = GetUserFromRequest(context);
-            var g = applicationDbContext.Groups.Where(x => x.GroupId == gs.Group.OwnerId).FirstOrDefault();
+            var g = applicationDbContext.Groups.Find(gs.Group.GroupId);
             if (!Authorize(context, u.Username) && g.OwnerId == u.Id)
                 throw new UnauthorizedAccessException();
 
             gs.BSecurity = !gs.BSecurity;
 
             if (gs.BSecurity)
-                gs.Security = lumine8_GrpcService.Security.PrivateSecurity;
+                gs.Security = Security.PrivateSecurity;
             else
-                gs.Security = lumine8_GrpcService.Security.PublicSecurity;
+                gs.Security = Security.PublicSecurity;
 
             applicationDbContext.Groups.Update(gs.Group);
             applicationDbContext.SaveChanges();
@@ -1193,27 +1213,29 @@ namespace lumine8.Server.Services
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
-            var role = applicationDbContext.Roles.Where(x => x.RoleId == u.Id).FirstOrDefault();
+            var role = new Role { UserId = u.Id, GroupId = g.GroupId };
 
-            if (g.GroupJoin == Join.Anonymous)
+            if (role == null)
             {
-                role.RoleType = RoleType.Member;
-                applicationDbContext.Roles.Add(role);
-                applicationDbContext.SaveChanges();
-
-                return Task.FromResult(new ServerMessage { Message = "Joined group" });
-            }
-            else if (g.GroupJoin == Join.Approval)
-            {
-                if (applicationDbContext.GroupApprovals.Where(x => x.UserId == role.UserId && x.GroupId == g.GroupId).FirstOrDefault() == null)
+                if (g.GroupJoin == Join.Anonymous)
                 {
-                    applicationDbContext.GroupApprovals.Add(new GroupApproval { GroupId = g.GroupId, UserId = role.UserId });
+                    role.RoleType = RoleType.Member;
+                    applicationDbContext.Roles.Add(role);
                     applicationDbContext.SaveChanges();
 
-                    return Task.FromResult(new ServerMessage { Message = "Sent request" });
+                    return Task.FromResult(new ServerMessage { Message = "Joined group" });
+                }
+                else if (g.GroupJoin == Join.Approval)
+                {
+                    if (applicationDbContext.GroupApprovals.Where(x => x.UserId == role.UserId && x.GroupId == g.GroupId).FirstOrDefault() == null)
+                    {
+                        applicationDbContext.GroupApprovals.Add(new GroupApproval { GroupId = g.GroupId, UserId = role.UserId });
+                        applicationDbContext.SaveChanges();
+
+                        return Task.FromResult(new ServerMessage { Message = "Sent request" });
+                    }
                 }
             }
-
             throw new System.Exception();
         }
 
@@ -1231,7 +1253,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupLink> DeleteGroupLink(GroupLink l, ServerCallContext context)
         {
-            var lLink = applicationDbContext.GroupLinks.Where(x => x.LinkId == l.LinkId).FirstOrDefault();
+            var lLink = applicationDbContext.GroupLinks.Find(l.LinkId);
             applicationDbContext.GroupLinks.Remove(lLink);
             applicationDbContext.SaveChanges();
 
@@ -1265,7 +1287,7 @@ namespace lumine8.Server.Services
 
         public override Task<Hashtag> DeleteHashtag(Hashtag ht, ServerCallContext context)
         {
-            var h = applicationDbContext.Hashtags.Where(x => x.HashtagId == ht.HashtagId).FirstOrDefault();
+            var h = applicationDbContext.Hashtags.Find(ht.HashtagId);
             applicationDbContext.Hashtags.Remove(h);
 
             return Task.FromResult(ht);
@@ -1339,7 +1361,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupImage> DeleteGroupProfilePicture(GroupImage pp, ServerCallContext context)
         {
-            var lp = applicationDbContext.GroupImages.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+            var lp = applicationDbContext.GroupImages.Find(pp.ImageId);
 
             var com = applicationDbContext.GroupUserComments.Where(x => x.ImageId == lp.ImageId).ToList();
             applicationDbContext.GroupUserComments.RemoveRange(com);
@@ -1369,10 +1391,10 @@ namespace lumine8.Server.Services
             var suSignedInUser = GetSharedUser(Username: u.Username);
             var signedInUserRole = applicationDbContext.Roles.Where(x => x.UserId == suSignedInUser.Id && x.GroupId == pcm.GroupId).FirstOrDefault();
 
-            var group = applicationDbContext.Groups.Where(x => x.GroupId == pcm.GroupId).FirstOrDefault();
+            var group = applicationDbContext.Groups.Find(pcm.GroupId);
             var sections = applicationDbContext.SectionRoles.Where(x => x.GroupId == pcm.GroupId).FirstOrDefault();
-            var banned = (applicationDbContext.Bans.Where(x => x.UserId == suSignedInUser.Id && x.GroupId == pcm.GroupId).FirstOrDefault() != null);
-            var isRole = (signedInUserRole.RoleType < sections.Pictures);
+            var banned = applicationDbContext.Bans.Where(x => x.UserId == suSignedInUser.Id && x.GroupId == pcm.GroupId).FirstOrDefault() != null;
+            var isRole = signedInUserRole.RoleType < sections.Pictures;
 
             var images = applicationDbContext.GroupImages.Where(x => x.Category == pcm.Cagetory && x.UserId == pcm.GroupId).AsQueryable();
 
@@ -1384,7 +1406,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupImage> DeletePictureCategory(GroupImage img, ServerCallContext context)
         {
-            var limg = applicationDbContext.GroupImages.Where(x => x.ImageId == img.ImageId).FirstOrDefault();
+            var limg = applicationDbContext.GroupImages.Find(img.ImageId);
             var imgs = applicationDbContext.GroupImages.Where(x => x.Category == limg.Category && x.GroupId == limg.GroupId).ToList();
 
             if (imgs.Count() == 1)
@@ -1429,8 +1451,7 @@ namespace lumine8.Server.Services
             var comments = applicationDbContext.GroupUserComments.Where(x => x.ImageId == img.ImageId).ToList();
             var users = applicationDbContext.Users.Where(x => comments.Any(y => y.UserId == x.Id)).ToList();
             var suUsers = new List<SharedUser>();
-            foreach (var u in users)
-                suUsers.Add(GetSharedUser(Id: u.Id));
+            users.ForEach(x => suUsers.Add(GetSharedUser(Id: x.Id)));
 
             var modal = new GroupModal();
             modal.Comments.AddRange(comments);
@@ -1441,7 +1462,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupUserComment> DeleteGroupComment(GroupUserComment comment, ServerCallContext context)
         {
-            var c = applicationDbContext.GroupUserComments.Where(x => x.CommentId == comment.CommentId).FirstOrDefault();
+            var c = applicationDbContext.GroupUserComments.Find(comment.CommentId);
             applicationDbContext.GroupUserComments.Remove(c);
             applicationDbContext.SaveChanges();
 
@@ -1477,10 +1498,7 @@ namespace lumine8.Server.Services
         public override Task<MainGroupProfilePictureModel> GetMainGroupProfilePicture(GroupModel group, ServerCallContext context)
         {
             var pp = applicationDbContext.GroupProfilePictures.Where(x => x.GroupId == group.GroupId).FirstOrDefault();
-            GroupImage image = null;
-
-            if (pp != null)
-                image = applicationDbContext.GroupImages.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+            GroupImage image = (pp != null) ? applicationDbContext.GroupImages.Find(pp.ImageId) : new GroupImage();
 
             var model = new MainGroupProfilePictureModel
             {
@@ -1495,12 +1513,12 @@ namespace lumine8.Server.Services
         {
             var signedInUser = GetUserFromRequest(context);
 
-            var group = applicationDbContext.Groups.Where(x => x.GroupId == id.GroupId_).FirstOrDefault();
+            var group = applicationDbContext.Groups.Find(id.GroupId_);
 
             //var signedInUser = applicationDbContext.Users.Where(x => x.Username == user).FirstOrDefault();
             var su = GetSharedUser(Id: signedInUser.Id);
 
-            var owner = applicationDbContext.Users.Where(x => x.Id == group.OwnerId).FirstOrDefault();
+            var owner = applicationDbContext.Users.Find(group.OwnerId);
             var suOwner = GetSharedUser(Id: owner.Id);
 
             var signedInUserRole = applicationDbContext.Roles.Where(x => x.UserId == signedInUser.Id && x.GroupId == group.GroupId).FirstOrDefault();
@@ -1508,8 +1526,7 @@ namespace lumine8.Server.Services
 
             var roles = applicationDbContext.Roles.Where(x => x.GroupId == group.GroupId && x.UserId != signedInUser.Id && x.UserId != owner.Id).ToList();
             var suMembers = new List<SharedUser>();
-            foreach (var u in roles)
-                suMembers.Add(GetSharedUser(Id: u.UserId));
+            roles.ForEach(x => suMembers.Add(GetSharedUser(Id: x.UserId)));
 
             var bans = applicationDbContext.Bans.Where(x => x.GroupId == group.GroupId).ToList();
 
@@ -1526,15 +1543,15 @@ namespace lumine8.Server.Services
 
         public override Task<GroupModel> Leave(Role role, ServerCallContext context)
         {
-            var r = applicationDbContext.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
-            var u = applicationDbContext.Users.Where(x => x.Id == r.UserId).FirstOrDefault();
+            var r = applicationDbContext.Roles.Find(role.RoleId);
+            var u = applicationDbContext.Users.Find(r.UserId);
             if (!Authorize(context, u.Username))
-                throw new System.UnauthorizedAccessException();
+                throw new UnauthorizedAccessException();
 
             applicationDbContext.Roles.Remove(role);
             applicationDbContext.SaveChanges();
 
-            var g = applicationDbContext.Groups.Where(x => x.GroupId == role.GroupId).FirstOrDefault();
+            var g = applicationDbContext.Groups.Find(role.GroupId);
 
             return Task.FromResult(g);
         }
@@ -1551,8 +1568,7 @@ namespace lumine8.Server.Services
             !bans.AsEnumerable().Any(y => y.UserId == x.Id && y.GroupId == search.GroupId)).ToList();
 
             var su = new List<SharedUser>();
-            foreach (var u in users)
-                su.Add(GetSharedUser(Id: u.Id));
+            users.ForEach(x => su.Add(GetSharedUser(Id: x.Id) ));
 
             var r = new SearchInvitesResponse();
             r.Users.AddRange(su);
@@ -1606,7 +1622,7 @@ namespace lumine8.Server.Services
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
-            var r = applicationDbContext.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+            var r = applicationDbContext.Roles.Find(role.RoleId);
 
             var signedInUserRole = applicationDbContext.Roles.Where(x => x.UserId == u.Id && x.GroupId == r.GroupId).FirstOrDefault();
             var sectionRoles = applicationDbContext.SectionRoles.Where(x => x.GroupId == r.GroupId).FirstOrDefault();
@@ -1624,8 +1640,8 @@ namespace lumine8.Server.Services
 
         public override Task<Role> BanUser(Role role, ServerCallContext context)
         {
-            var r = applicationDbContext.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
-            var u = applicationDbContext.Users.Where(x => x.Id == r.UserId).FirstOrDefault();
+            var r = applicationDbContext.Roles.Find(role.RoleId);
+            var u = applicationDbContext.Users.Find(r.UserId);
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
@@ -1653,8 +1669,7 @@ namespace lumine8.Server.Services
             var bans = applicationDbContext.Bans.Where(x => x.GroupId == search.GroupId).ToList();
             var users = applicationDbContext.Users.Where(x => x.Name.ToLower().Contains(search.Value.ToLower()) && x.Id != us.Id && !bans.Any(y => y.UserId == x.Id)).ToList();
             var suBans = new List<SharedUser>();
-            foreach (var u in users)
-                suBans.Add(GetSharedUser(Id: u.Id));
+            users.ForEach(x => suBans.Add(GetSharedUser(Id: x.Id)));
 
             var model = new SearchBanResponse();
             model.Users.AddRange(suBans);
@@ -1669,7 +1684,7 @@ namespace lumine8.Server.Services
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
-            var b = applicationDbContext.Bans.Where(x => x.BanId == ban.BanId).FirstOrDefault();
+            var b = applicationDbContext.Bans.Find(ban.BanId);
 
             var signedInUserRole = applicationDbContext.Roles.Where(x => x.UserId == u.Id && x.GroupId == b.GroupId).FirstOrDefault();
             var sectionRoles = applicationDbContext.SectionRoles.Where(x => x.GroupId == b.GroupId).FirstOrDefault();
@@ -1687,8 +1702,8 @@ namespace lumine8.Server.Services
 
         public override Task<SectionRoles> UpdateSectionRoles(SectionRoles sections, ServerCallContext context)
         {
-            var g = applicationDbContext.Groups.Where(x => x.GroupId == sections.GroupId).FirstOrDefault();
-            var u = applicationDbContext.Users.Where(x => x.Id == g.OwnerId).FirstOrDefault();
+            var g = applicationDbContext.Groups.Find(sections.GroupId);
+            var u = applicationDbContext.Users.Find(g.OwnerId);
 
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
@@ -1710,7 +1725,7 @@ namespace lumine8.Server.Services
 
             var signedInUserRole = applicationDbContext.Roles.Where(x => x.UserId == signedInUser.Id && x.GroupId == id.GroupId_).FirstOrDefault();
 
-            var group = applicationDbContext.Groups.Where(x => x.GroupId == id.GroupId_).FirstOrDefault();
+            var group = applicationDbContext.Groups.Find(id.GroupId_);
             var roles = applicationDbContext.Roles.Where(x => x.GroupId == id.GroupId_).ToList();
             var sections = applicationDbContext.SectionRoles.Where(x => x.GroupId == id.GroupId_).FirstOrDefault();
 
@@ -1772,7 +1787,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupImage> DeleteGroupImage(GroupImage img, ServerCallContext context)
         {
-            var limg = applicationDbContext.GroupImages.Where(x => x.ImageId == img.ImageId).FirstOrDefault();
+            var limg = applicationDbContext.GroupImages.Find(img.ImageId);
             var imgs = applicationDbContext.GroupImages.Where(x => x.Category == limg.Category && x.GroupId == limg.GroupId).ToList();
 
             if (imgs.Count() == 1)
@@ -1817,8 +1832,7 @@ namespace lumine8.Server.Services
 
             var friends = applicationDbContext.Friends.Where(x => x.UserId == user.Id).ToList();
             var suFriends = new List<SharedUser>();
-            foreach (var f in friends)
-                suFriends.Add(GetSharedUser(Id: f.FriendId));
+            friends.ForEach(x => suFriends.Add(GetSharedUser(Id: x.FriendId)));
 
             var tagsFeeds = applicationDbContext.TagsFeeds.Where(x => x.UserId == user.Id).ToList();
 
@@ -1869,12 +1883,12 @@ namespace lumine8.Server.Services
 
         public override Task<TagsFeed> DeleteTagFeed(TagsFeed tag, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == tag.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(tag.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
 
-            var lTag = applicationDbContext.TagsFeeds.Where(x => x.TagsFeedId == tag.TagsFeedId).FirstOrDefault();
+            var lTag = applicationDbContext.TagsFeeds.Find(tag.TagsFeedId);
             applicationDbContext.TagsFeeds.Remove(lTag);
             applicationDbContext.SaveChanges();
 
@@ -1883,7 +1897,7 @@ namespace lumine8.Server.Services
 
         public override Task<TagsFeed> RemoveBlacklistTag(TagsFeed tag, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == tag.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(tag.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1897,7 +1911,7 @@ namespace lumine8.Server.Services
 
         public override Task<FriendDuo> RemoveFriendFilter(FriendDuo friend, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == friend.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(friend.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1911,7 +1925,7 @@ namespace lumine8.Server.Services
 
         public override Task<FriendDuo> RemoveFriendBlacklist(FriendDuo friend, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == friend.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(friend.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1925,7 +1939,7 @@ namespace lumine8.Server.Services
 
         public override Task<FriendDuo> AddFriendFilter(FriendDuo friend, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == friend.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(friend.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1939,7 +1953,7 @@ namespace lumine8.Server.Services
 
         public override Task<FriendDuo> AddBlacklistFriend(FriendDuo friend, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == friend.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(friend.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1953,7 +1967,7 @@ namespace lumine8.Server.Services
 
         public override Task<Role> GroupRemoveFilter(Role role, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == role.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(role.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1967,7 +1981,7 @@ namespace lumine8.Server.Services
 
         public override Task<Role> GroupRemoveBlacklist(Role role, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == role.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(role.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1981,7 +1995,7 @@ namespace lumine8.Server.Services
 
         public override Task<Role> GroupAddFilter(Role role, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == role.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(role.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -1999,7 +2013,7 @@ namespace lumine8.Server.Services
             List<Room> high = new();
             List<Room> low = new();
 
-            var user = applicationDbContext.Users.Where(x => x.Id == indexRooms.UserId).FirstOrDefault();
+            var user = applicationDbContext.Users.Find(indexRooms.UserId);
             var shares = applicationDbContext.Shares.Where(x => x.UserId == user.Id).ToList();
             var friends = applicationDbContext.Friends.Where(x => x.UserId == user.Id).ToList();
             var tagsFeeds = applicationDbContext.TagsFeeds.Where(x => x.UserId == user.Id).ToList();
@@ -2015,7 +2029,7 @@ namespace lumine8.Server.Services
                 foreach (var s in shares)
                 {
                     var f = applicationDbContext.Friends.Where(x => x.UserId == user.Id && x.FriendId == s.SenderId).FirstOrDefault();
-                    var r = applicationDbContext.Rooms.Where(x => x.RoomId == s.RoomId).FirstOrDefault();
+                    var r = applicationDbContext.Rooms.Find(s.RoomId);
 
                     if (DateTime.UtcNow < r.Date.ToDateTime().AddHours(user.HoursFeed))
                     {
@@ -2033,13 +2047,13 @@ namespace lumine8.Server.Services
                 foreach (var g in gr)
                 {
                     var role = applicationDbContext.Roles.Where(x => x.GroupId == g.GroupId && x.UserId == user.Id).FirstOrDefault();
-                    var room = applicationDbContext.Rooms.Where(x => x.RoomId == g.RoomId).FirstOrDefault();
+                    var room = applicationDbContext.Rooms.Find(g.RoomId);
 
                     if (room != null && !role.Blacklist)
                     {
                         if (DateTime.UtcNow < room.Date.ToDateTime().AddHours(user.HoursFeed))
                         {
-                            if ((indexRooms.FGroups && role.Filter) || !indexRooms.FGroups)
+                            if (indexRooms.FGroups && role.Filter || !indexRooms.FGroups)
                             {
                                 if (role.Priority)
                                     high.Add(room);
@@ -2053,7 +2067,7 @@ namespace lumine8.Server.Services
 
             foreach (var f in friends)
             {
-                var friend = applicationDbContext.Users.Where(x => x.Id == f.FriendId).FirstOrDefault();
+                var friend = applicationDbContext.Users.Find(f.FriendId);
                 if (friend.FriendsFeed && !f.Blacklist)
                 {
                     foreach (var r in applicationDbContext.Rooms.Where(x => x.OwnerId == f.FriendId).ToList())
@@ -2064,7 +2078,7 @@ namespace lumine8.Server.Services
 
                             if (rmGrp == null)
                             {
-                                if ((indexRooms.FFriends && f.Filter) || !indexRooms.FFriends)
+                                if (indexRooms.FFriends && f.Filter || !indexRooms.FFriends)
                                 {
                                     if (f.Priority)
                                         high.Add(r);
@@ -2155,7 +2169,7 @@ namespace lumine8.Server.Services
 
         public override Task<UpdatedHours> UpdateHours(SharedUser user, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == user.Id).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(user.Id);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -2177,7 +2191,7 @@ namespace lumine8.Server.Services
         {
             var signedInUser = GetUserFromRequest(context);
 
-            var about = applicationDbContext.About.Where(x => x.AboutId == id.Id_).FirstOrDefault();
+            var about = applicationDbContext.About.Find(id.Id_);
             if (about == null)
                 about = new About { AboutId = signedInUser.Id };
 
@@ -2213,7 +2227,7 @@ namespace lumine8.Server.Services
                 });
                 applicationDbContext.SaveChanges();
 
-                profileSecurity = applicationDbContext.ProfileSecurities.Where(x => x.UserId == id.Id_).FirstOrDefault();
+                profileSecurity = applicationDbContext.ProfileSecurities.Find(id.Id_);
             }
             var privateProfile = applicationDbContext.PrivateProfiles.Where(x => x.UserId == id.Id_).ToList();
 
@@ -2225,7 +2239,7 @@ namespace lumine8.Server.Services
 
         public override Task<Empty> UpdateAbout(UpdateAboutRequest about, ServerCallContext context)
         {
-            if (applicationDbContext.About.Where(x => x.AboutId == about.User.Id).FirstOrDefault() == null)
+            if (applicationDbContext.About.Find(about.User.Id) == null)
             {
                 about.About.DOB = new Timestamp();
                 about.About.AboutId = about.User.Id;
@@ -2233,13 +2247,13 @@ namespace lumine8.Server.Services
             }
             else
             {
-                var a = applicationDbContext.About.Where(x => x.AboutId == about.User.Id).FirstOrDefault();
+                var a = applicationDbContext.About.Find(about.User.Id);
                 a.MartialStatus = about.About.MartialStatus;
                 a.Sex = about.About.Sex;
                 applicationDbContext.About.Update(a);
             }
 
-            var u = applicationDbContext.Users.Where(x => x.Id == about.User.Id).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(about.User.Id);
             u.Name = about.User.Name;
             applicationDbContext.Users.Update(u);
 
@@ -2266,7 +2280,7 @@ namespace lumine8.Server.Services
 
         public override Task<Education> DeleteEducation(Education education, ServerCallContext context)
         {
-            var e = applicationDbContext.EducationList.Where(x => x.EducationId == education.EducationId).FirstOrDefault();
+            var e = applicationDbContext.EducationList.Find(education.EducationId);
 
             applicationDbContext.EducationList.Remove(e);
             applicationDbContext.SaveChanges();
@@ -2284,9 +2298,9 @@ namespace lumine8.Server.Services
 
         public override Task<InterestPageModel> GetInterestPageModel(Id id, ServerCallContext context)
         {
-            var profileSecurity = applicationDbContext.ProfileSecurities.Where(x => x.UserId == id.Id_).FirstOrDefault();
-            var interests = applicationDbContext.Interests.Where(x => x.UserId == id.Id_);
-            var b = (applicationDbContext.Friends.Where(x => x.UserId == GetUserFromRequest(context).Id && x.FriendId == id.Id_).FirstOrDefault() == null);
+            var profileSecurity = applicationDbContext.ProfileSecurities.Find(id.Id_);
+            var interests = applicationDbContext.Interests.Where(x => x.UserId == id.Id_).ToList();
+            var b = applicationDbContext.Friends.Where(x => x.UserId == GetUserFromRequest(context).Id && x.FriendId == id.Id_).FirstOrDefault() == null;
 
             var model = new InterestPageModel { ProfileSecurity = profileSecurity, IsFriend = b };
             model.Interests.AddRange(interests);
@@ -2309,7 +2323,7 @@ namespace lumine8.Server.Services
 
         public override Task<Interest> DeleteInterest(Id id, ServerCallContext context)
         {
-            var interest = applicationDbContext.Interests.Where(x => x.InterestId == id.Id_).FirstOrDefault();
+            var interest = applicationDbContext.Interests.Find(id.Id_);
             applicationDbContext.Interests.Remove(interest);
             applicationDbContext.SaveChanges();
 
@@ -2337,8 +2351,8 @@ namespace lumine8.Server.Services
 
             var uRequests = applicationDbContext.Users.AsEnumerable().Where(x => requests.Any(y => y.SenderId == x.Id)).ToList();
             var suRequests = new List<SharedUser>();
-            foreach (var uR in uRequests.ToList())
-                suRequests.Add(GetSharedUser(Id: uR.Id));
+            uRequests.ForEach(x => suRequests.Add(GetSharedUser(Id: x.Id)));
+
             var ppRequests = applicationDbContext.ProfilePictures.AsEnumerable().Where(x => requests.Any(y => y.SenderId == x.UserId)).ToList();
             var uImgRequests = applicationDbContext.Images.AsEnumerable().Where(x => ppRequests.Any(y => y.ImageId == x.ImageId)).ToList();
 
@@ -2348,8 +2362,7 @@ namespace lumine8.Server.Services
 
             var friends = applicationDbContext.Friends.Where(x => x.UserId == u.Id).ToList();
             var suFriends = new List<SharedUser>();
-            foreach (var f in friends)
-                suFriends.Add(GetSharedUser(Id: f.FriendId));
+            friends.ForEach(x => suFriends.Add(GetSharedUser(Id: x.FriendId)));
 
             var rms = applicationDbContext.UserRooms.Where(x => x.UserId == u.Id).ToList();
             var notFriends = applicationDbContext.Users.AsEnumerable().Where(x => rms.Any(y => y.OtherId == x.Id) && !friends.Any(y => y.FriendId == x.Id)).ToList();
@@ -2394,8 +2407,8 @@ namespace lumine8.Server.Services
 
         public override Task<Notification> DeleteNotification(Notification notification, ServerCallContext context)
         {
-            var n = applicationDbContext.Notifications.Where(x => x.NotificationId == notification.NotificationId).FirstOrDefault();
-            var u = applicationDbContext.Users.Where(x => x.Id == n.UserId).FirstOrDefault();
+            var n = applicationDbContext.Notifications.Find(notification.NotificationId);
+            var u = applicationDbContext.Users.Find(n.UserId);
 
             if (!Authorize(context, u.Username))
                 throw new UnauthorizedAccessException();
@@ -2408,10 +2421,10 @@ namespace lumine8.Server.Services
 
         public override Task<Request> AcceptFriendRequest(Request request, ServerCallContext context)
         {
-            var r = applicationDbContext.Requests.Where(x => x.RequestId == request.RequestId).FirstOrDefault();
+            var r = applicationDbContext.Requests.Find(request.RequestId);
 
-            bool isFriend = (applicationDbContext.Friends.Where(x => x.UserId == r.SenderId && x.FriendId == r.SentToId).FirstOrDefault() == null ||
-                         applicationDbContext.Friends.Where(x => x.UserId == r.SentToId && x.FriendId == r.SenderId).FirstOrDefault() == null);
+            bool isFriend = applicationDbContext.Friends.Where(x => x.UserId == r.SenderId && x.FriendId == r.SentToId).FirstOrDefault() == null ||
+                         applicationDbContext.Friends.Where(x => x.UserId == r.SentToId && x.FriendId == r.SenderId).FirstOrDefault() == null;
 
             if (isFriend)
             {
@@ -2427,7 +2440,7 @@ namespace lumine8.Server.Services
 
         public override Task<Request> DeclineFriendRequest(Request request, ServerCallContext context)
         {
-            var r = applicationDbContext.Requests.Where(x => x.RequestId == request.RequestId).FirstOrDefault();
+            var r = applicationDbContext.Requests.Find(request.RequestId);
 
             applicationDbContext.Requests.Remove(r);
             applicationDbContext.SaveChanges();
@@ -2437,7 +2450,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupRequest> AcceptGroupRequest(GroupRequest request, ServerCallContext context)
         {
-            var r = applicationDbContext.GroupRequests.Where(x => x.RequestId == request.RequestId).FirstOrDefault();
+            var r = applicationDbContext.GroupRequests.Find(request.RequestId);
 
             var role = new Role { GroupId = request.GroupId, UserId = request.UserId, RoleType = RoleType.Member };
 
@@ -2450,7 +2463,7 @@ namespace lumine8.Server.Services
 
         public override Task<GroupRequest> DeclineGroupRequest(GroupRequest request, ServerCallContext context)
         {
-            var r = applicationDbContext.GroupRequests.Where(x => x.RequestId == request.RequestId).FirstOrDefault();
+            var r = applicationDbContext.GroupRequests.Find(request.RequestId);
 
             applicationDbContext.GroupRequests.Remove(r);
             applicationDbContext.SaveChanges();
@@ -2464,9 +2477,7 @@ namespace lumine8.Server.Services
 
             var pp = applicationDbContext.ProfilePictures.Where(x => x.UserId == su.Id).FirstOrDefault();
 
-            Image img = new Image();
-            if (pp != null)
-                img = applicationDbContext.Images.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+            Image img = (pp != null) ? applicationDbContext.Images.Find(pp.ImageId) : new Image();
 
             return Task.FromResult(new MainProfilePictureModel { Image = img, ProfilePicture = pp, User = su });
         }
@@ -2498,7 +2509,7 @@ namespace lumine8.Server.Services
 
         public override Task<Lived> DeletePlace(Lived lived, ServerCallContext context)
         {
-            var p = applicationDbContext.PlacesLived.Where(x => x.PlaceLivedId == lived.PlaceLivedId).FirstOrDefault();
+            var p = applicationDbContext.PlacesLived.Find(lived.PlaceLivedId);
             applicationDbContext.PlacesLived.Remove(p);
             applicationDbContext.SaveChanges();
 
@@ -2515,13 +2526,11 @@ namespace lumine8.Server.Services
 
         public override Task<PostPageModel> GetPostModel(Room room, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == room.OwnerId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(room.OwnerId);
             var owner = GetSharedUser(Id: room.OwnerId);
             var signedInUser = GetUserFromRequest(context);
 
-            var rmGrp = applicationDbContext.RoomGroups.Where(x => x.RoomId == room.RoomId).FirstOrDefault();
-            if (rmGrp == null)
-                rmGrp = new RoomGroup();
+            var rmGrp = applicationDbContext.RoomGroups.Where(x => x.RoomId == room.RoomId).FirstOrDefault() ?? new RoomGroup();
 
             GroupModel group = new GroupModel();
             Role signedInUserRole = new Role();
@@ -2529,7 +2538,7 @@ namespace lumine8.Server.Services
 
             if (applicationDbContext.RoomGroups.Where(x => x.RoomId == room.RoomId).FirstOrDefault() != null)
             {
-                group = applicationDbContext.Groups.Where(x => x.GroupId == rmGrp.GroupId).FirstOrDefault();
+                group = applicationDbContext.Groups.Find(rmGrp.GroupId);
 
                 signedInUserRole = applicationDbContext.Roles.Where(x => x.GroupId == rmGrp.GroupId && x.UserId == signedInUser.Id).FirstOrDefault();
                 sectionRoles = applicationDbContext.SectionRoles.Where(x => x.GroupId == rmGrp.GroupId).FirstOrDefault();
@@ -2548,12 +2557,9 @@ namespace lumine8.Server.Services
 
             var votes = applicationDbContext.Votes.Where(x => x.RoomId == room.RoomId).ToList();
             var uVotes = new List<SharedUser>();
-            foreach (var v in votes)
-                uVotes.Add(GetSharedUser(Id: v.UserId));
+            votes.ForEach(x => uVotes.Add(GetSharedUser(Id: x.UserId)));
 
-            Like like = new Like();
-            if (rmToMsg != null)
-                like = applicationDbContext.Likes.Where(x => x.UserId == signedInUser.Id && x.MessageId == rmToMsg.MessageId).FirstOrDefault();
+            Like like = (rmToMsg != null) ? applicationDbContext.Likes.Where(x => x.UserId == signedInUser.Id && x.MessageId == rmToMsg.MessageId).FirstOrDefault() : new Like();
 
             var imgRms = applicationDbContext.ImageRooms.Where(x => x.RoomId == room.RoomId).ToList();
             var images = applicationDbContext.Images.Where(x => x.UserId == signedInUser.Id).ToList();
@@ -2564,8 +2570,7 @@ namespace lumine8.Server.Services
             var messages = applicationDbContext.Messages.AsEnumerable().Where(x => msgOn.Any(y => x.MessageId == y.MessageId)).ToList();
             var msgCount = applicationDbContext.Messages.AsEnumerable().Where(x => x.RoomId == rmToMsg.RoomId).Count();
 
-            ProfilePicture pp = new();
-            Image pic = new Image();
+            
 
             if (string.IsNullOrWhiteSpace(msg.SenderId))
             {
@@ -2574,10 +2579,8 @@ namespace lumine8.Server.Services
                 applicationDbContext.SaveChanges();
             }
 
-            pp = applicationDbContext.ProfilePictures.Where(x => x.UserId == msg.SenderId).FirstOrDefault();
-
-            if (pp != null && !string.IsNullOrWhiteSpace(pp.ProfilePictureId))
-                pic = applicationDbContext.Images.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+            ProfilePicture pp = applicationDbContext.ProfilePictures.Where(x => x.UserId == msg.SenderId).FirstOrDefault();
+            Image pic = (pp != null && !string.IsNullOrWhiteSpace(pp.ProfilePictureId)) ? applicationDbContext.Images.Find(pp.ImageId) : new Image();
 
             var hashtags = applicationDbContext.MessageHashtags.ToList().Where(x => x.RoomId == rmToMsg.RoomId).ToList();
 
@@ -2594,11 +2597,7 @@ namespace lumine8.Server.Services
                 friends = applicationDbContext.Friends.AsEnumerable().Where(x => x.UserId == signedInUser.Id && messages.Any(y => y.SenderId == x.FriendId)).ToList();
             var uFriends = applicationDbContext.Friends.Where(x => x.UserId == signedInUser.Id).ToList();
             var myFriends = new List<SharedUser>();
-            foreach (var f in uFriends)
-            {
-                var su = GetSharedUser(Id: f.FriendId);
-                myFriends.Add(su);
-            }
+            uFriends.ForEach(x => myFriends.Add(GetSharedUser(Id: x.FriendId)));
 
             var shares = applicationDbContext.Shares.Where(x => x.RoomId == room.RoomId && applicationDbContext.Friends.Any(y => y.UserId == signedInUser.Id && x.UserId == y.FriendId)).ToList();
 
@@ -2661,32 +2660,22 @@ namespace lumine8.Server.Services
 
             var pp = applicationDbContext.ProfilePictures.Where(x => x.UserId == id.Id_).FirstOrDefault();
 
-            Image img = new();
-            if (pp != null)
-                img = applicationDbContext.Images.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+            Image img = (pp != null) ? applicationDbContext.Images.Find(pp.ImageId) : new();
 
-            FriendDuo friend = null;
+            FriendDuo friend = (u.Id != id.Id_) ? applicationDbContext.Friends.Where(x => x.UserId == u.Id && x.FriendId == id.Id_).FirstOrDefault() : null;
             bool isFriend = false;
-
-            if (u.Id != id.Id_)
-            {
-                friend = applicationDbContext.Friends.Where(x => x.UserId == u.Id && x.FriendId == id.Id_).FirstOrDefault();
-
-                if (friend != null)
-                    isFriend = true;
-            }
+            if (friend != null)
+                isFriend = true;
 
             return Task.FromResult(new ProfilePicturePageModel { ProfilePicture = pp, Image = img, IsFriend = isFriend });
         }
 
         public override Task<ReplyModel> GetReplyModel(Message message, ServerCallContext context)
         {
-            var m = applicationDbContext.Messages.Where(x => x.MessageId == message.MessageId).FirstOrDefault();
+            var m = applicationDbContext.Messages.Find(message.MessageId);
 
-            var u = applicationDbContext.Users.Where(x => x.Id == m.SenderId).FirstOrDefault();
-            SharedUser user = new();
-            if (u != null && !string.IsNullOrWhiteSpace(u.Id))
-                user = GetSharedUser(Id: u.Id);
+            var u = applicationDbContext.Users.Find(m.SenderId);
+            SharedUser user = (u != null && !string.IsNullOrWhiteSpace(u.Id)) ? GetSharedUser(Id: u.Id) : new();
 
             var messageOns = applicationDbContext.MessageOnMessages.Where(x => x.MessageOnId == m.MessageId).ToList();
             var messages = applicationDbContext.Messages.AsEnumerable().Where(x => messageOns.Any(y => x.MessageId == y.MessageId)).OrderByDescending(x => x.Date).ToList();
@@ -2744,6 +2733,11 @@ namespace lumine8.Server.Services
 
         public override Task<WorkHistory> CreateWork(WorkHistory work, ServerCallContext context)
         {
+            var u = applicationDbContext.Users.Find(work.UserId);
+
+            if (!Authorize(context, u.Username))
+                throw new UnauthorizedAccessException();
+
             applicationDbContext.WorkHistory.Add(work);
             applicationDbContext.SaveChanges();
 
@@ -2752,6 +2746,11 @@ namespace lumine8.Server.Services
 
         public override Task<WorkHistory> UpdateWork(WorkHistory work, ServerCallContext context)
         {
+            var u = applicationDbContext.Users.Find(work.UserId);
+
+            if (!Authorize(context, u.Username))
+                throw new UnauthorizedAccessException();
+
             applicationDbContext.WorkHistory.Update(work);
             applicationDbContext.SaveChanges();
 
@@ -2760,7 +2759,12 @@ namespace lumine8.Server.Services
 
         public override Task<WorkHistory> DeleteWork(WorkHistory work, ServerCallContext context)
         {
-            var w = applicationDbContext.WorkHistory.Where(x => x.WorkId == work.WorkId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(work.UserId);
+
+            if (!Authorize(context, u.Username))
+                throw new UnauthorizedAccessException();
+
+            var w = applicationDbContext.WorkHistory.Find(work.WorkId);
             applicationDbContext.WorkHistory.Remove(w);
             applicationDbContext.SaveChanges();
 
@@ -2791,20 +2795,53 @@ namespace lumine8.Server.Services
             var sigs = applicationDbContext.PetitionSigs.ToList();
             var users = applicationDbContext.Users.ToList().Where(x => petitions.Any(y => y.CreatedById == x.Id)).ToList();
 
+            
+            var u = GetUserFromRequest(context);
+            var petitionAddress = applicationDbContext.PetitionAddresses.Where(x => x.UserId == u.Id).FirstOrDefault();
+
             var model = new PetitionsPageModel();
-            model.User = GetUserFromRequest(context);
+            model.User = u;
             model.Petitions.AddRange(petitions);
             model.PetitionSigs.AddRange(sigs);
 
-            foreach(var u in users)
-                model.Users.Add(GetSharedUser(Id: u.Id));
+            if (petitionAddress != null && !string.IsNullOrWhiteSpace(petitionAddress.UserId))
+            {
+                var p = applicationDbContext.PlacesLived.Find(petitionAddress.LivedId);
+                model.Lived = p;
+                model.Country = applicationDbContext.Countries.Find(p.CountryId);
+                model.State = applicationDbContext.States.Find(p.StateId);
+                model.City = applicationDbContext.Cities.Find(p.CityId);
+            }
+            else
+            {
+                model.Lived = new Lived();
+                model.Country = new Country();
+                model.State = new State();
+                model.City = new City();
+            }
+
+            users.ForEach(x => model.Users.Add(GetSharedUser(Id: x.Id)));
+
+            return Task.FromResult(model);
+        }
+
+        public override Task<PetitionPageModel> GetPetition(Id id, ServerCallContext context)
+        {
+            var p = applicationDbContext.Petitions.Find(id.Id_);
+            var sigs = applicationDbContext.PetitionSigs.Where(x => x.PetitionId == id.Id_).ToList();
+            var users = applicationDbContext.Users.ToList().Where(x => sigs.Any(y => y.UserId == x.Id)).ToList();
+
+            var model = new PetitionPageModel();
+            model.User = GetUserFromRequest(context);
+            model.Petition = p;
+            model.Sigs.AddRange(sigs);
 
             return Task.FromResult(model);
         }
 
         public override Task<PetitionModel> CreatePetition(PetitionModel model, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == model.CreatedById).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(model.CreatedById);
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
@@ -2816,7 +2853,7 @@ namespace lumine8.Server.Services
 
         public override Task<PetitionModel> DeletePetition(PetitionModel model, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == model.CreatedById).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(model.CreatedById);
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
@@ -2829,7 +2866,8 @@ namespace lumine8.Server.Services
 
         public override Task<PetitionSig> SignPetition(PetitionSig sig, ServerCallContext context)
         {
-            var u = applicationDbContext.Users.Where(x => x.Id == sig.UserId).FirstOrDefault();
+            var u = applicationDbContext.Users.Find(sig.UserId);
+            //var u = applicationDbContext.Users.Where(x => x.Id == sig.UserId).FirstOrDefault();
             if (!Authorize(context, u.Username))
                 throw new System.Exception();
 
@@ -2850,7 +2888,7 @@ namespace lumine8.Server.Services
                 throw new System.Exception();
 
             var s = applicationDbContext.PetitionSigs.Where(x => x.PetitionId == sig.PetitionId && x.UserId == u.Id).FirstOrDefault();
-            if(s != null)
+            if (s != null)
             {
                 applicationDbContext.PetitionSigs.Remove(s);
                 applicationDbContext.SaveChanges();
@@ -2861,11 +2899,32 @@ namespace lumine8.Server.Services
                 throw new System.Exception();
         }
 
+        public override Task<Empty> UpdateAddressForPetition(Lived lived, ServerCallContext context)
+        {
+            var u = applicationDbContext.Users.Find(lived.UserId);
+
+            if (!Authorize(context, u.Username))
+                throw new System.Exception();
+
+            var a = applicationDbContext.PetitionAddresses.Find(u.Id);
+            if (a == null)
+                applicationDbContext.PetitionAddresses.Add(new PetitionAddress { LivedId = lived.PlaceLivedId, UserId = u.Id });
+            else
+            {
+                a.LivedId = lived.PlaceLivedId;
+                applicationDbContext.PetitionAddresses.Update(a);
+            }
+
+            applicationDbContext.SaveChanges();
+
+            return Task.FromResult(new Empty());
+        }
+
         public override Task<VideoHomePage> GetVideoHomePage(Empty Empty, ServerCallContext context)
         {
             var likes = applicationDbContext.VideoLikes.Where(x => x.Like && x.LikeDate.ToDateTime() <= DateTime.Now.AddHours(24)).GroupBy(x => x.VideoId).Select(x => x.FirstOrDefault()).Take(200).ToList();
             var vids = applicationDbContext.Videos.Where(x => likes.Any(y => y.VideoId == x.VideoId)).ToList();
-            
+
             var model = new VideoHomePage();
             model.Videos.AddRange(vids);
             model.Likes.AddRange(likes);

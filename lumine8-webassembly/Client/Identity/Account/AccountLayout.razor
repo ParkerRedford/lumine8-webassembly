@@ -15,13 +15,19 @@
 </style>
 
 <div class="page d-flex flex-row">
-    <div class="sidebar">
-        <AccountNavMenu />
-    </div>
+    <MobileUI>
+        <Settings>
+            <div class="sidebar">
+                <AccountNavMenu />
+            </div>
+        </Settings>
 
-    <div class="main">
-        <div class="content px-4">
-            @Body
-        </div>
-    </div>
+        <Feed>
+            <div class="main">
+                <div class="content px-4">
+                    @Body
+                </div>
+            </div>
+        </Feed>
+    </MobileUI>
 </div>

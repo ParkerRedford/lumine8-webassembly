@@ -126,8 +126,7 @@
         if (model.Banned || model.IsRole)
             navigationManager.NavigateTo("404", true);
 
-        foreach (var i in model.Images)
-            images.Add(i, false);
+        model.Images.ToList().ForEach(i => images.Add(i, false));
 
         render = true;
         StateHasChanged();

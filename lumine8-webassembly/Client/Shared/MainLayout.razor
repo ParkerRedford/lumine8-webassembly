@@ -603,17 +603,14 @@ else if (colorMode == ColorModeEnum.Dark)
             StateHasChanged();
 
             if (variables.isDesktop)
+            {
                 await JSRuntime.InvokeVoidAsync("setChatWidthInitial", chatsRef, friendsRef);
 
-                if(variables.isDesktop)
-                {
-                    await chatHub.SendAsync("Connect", model.SignedInUser.Id);
-                    await chatHub.SendAsync("Online", model.SignedInUser.Id);
-                }
-            await notifyHub.SendAsync("Connect", model.SignedInUser.Id);
+                await chatHub.SendAsync("Connect", model.SignedInUser.Id);
+                await chatHub.SendAsync("Online", model.SignedInUser.Id);
 
-            if (variables.isDesktop)
-            {
+                await notifyHub.SendAsync("Connect", model.SignedInUser.Id);
+
                 chatHub.On<string>("OpenedRoom", async (UserId) =>
                 {
                     chats.Add(UserId);

@@ -25,7 +25,6 @@ namespace lumine8.Server.Data
             //You can use ApplicationDbContextModelSnapshot.cs under the Migrations folder to create your database: update-database -context applicationdbcontext
 
             var converter = new ValueConverter<Timestamp, DateTime>(v => v.ToDateTime().ToUniversalTime(), v => Timestamp.FromDateTime(v.ToUniversalTime()));
-            //builder.Entity<Timestamp>().HasNoKey();
             builder.Ignore<Timestamp>();
 
             //Users
@@ -61,7 +60,6 @@ namespace lumine8.Server.Data
             builder.Entity<GroupImage>().HasKey(k => k.ImageId);
             builder.Entity<GroupImage>().Property(p => p.CreateDate).IsRequired().HasConversion(converter);
             builder.Entity<GroupImage>().Property(p => p.ImageId).HasDefaultValueSql("gen_random_uuid()");
-
 
             builder.Entity<LumineCheck>().HasKey(k => k.CheckId);
             builder.Entity<LumineCheck>().Property(p => p.CheckId).HasDefaultValueSql("gen_random_uuid()");
@@ -185,13 +183,6 @@ namespace lumine8.Server.Data
             builder.Entity<TagsFeed>().HasKey(k => k.TagsFeedId);
             builder.Entity<TagsFeed>().Property(p => p.TagsFeedId).HasDefaultValueSql("gen_random_uuid()");
 
-            //Location
-            builder.Entity<Country>().HasKey(k => k.Id);
-            builder.Entity<State>().HasKey(k => k.Id);
-            //builder.Entity<State>().HasAlternateKey(k => k.CountryId);
-            builder.Entity<City>().HasKey(k => k.Id);
-            //builder.Entity<City>().HasAlternateKey(k => k.StateId);
-
             //Video
             builder.Entity<Video>().HasKey(k => k.VideoId);
             builder.Entity<Video>().Property(p => p.UploadDate).IsRequired().HasConversion(converter);
@@ -220,15 +211,21 @@ namespace lumine8.Server.Data
             builder.Entity<PFAQ>().HasKey(k => k.FAQId);
             builder.Entity<PFAQ>().Property(p => p.FAQId).HasDefaultValueSql("gen_random_uuid()");
 
-            //Petiions
+            //Petitions
             builder.Entity<PetitionModel>().HasKey(k => k.PetitionId);
             builder.Entity<PetitionModel>().Property(p => p.PetitionId).HasDefaultValue("gen_random_uuid()");
 
             builder.Entity<PetitionSig>().HasKey(k => k.PetitionSigId);
             builder.Entity<PetitionSig>().Property(p => p.PetitionSigId).HasDefaultValue("gen_random_uuid()");
 
-            /*
-            builder.Entity<ApplicationUser>().HasMany(x => x.FriendDuos).WithOne(e => e.ApplicationUser).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<PetitionAddress>().HasKey(k => k.UserId);
+
+            //Location
+            builder.Entity<Country>().HasKey(k => k.Id);
+            builder.Entity<State>().HasKey(k => k.Id);
+            builder.Entity<City>().HasKey(k => k.Id);
+
+            /*builder.Entity<ApplicationUser>().HasMany(x => x.FriendDuos).WithOne(e => e.ApplicationUser).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<ApplicationUser>().HasMany(x => x.FriendDuos).WithOne(e => e.ApplicationUser).HasForeignKey(x => x.FriendId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<ApplicationUser>().HasMany(x => x.Requests).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.SenderId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<ApplicationUser>().HasMany(x => x.Requests).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.SentToId).OnDelete(DeleteBehavior.Cascade);
@@ -272,6 +269,7 @@ namespace lumine8.Server.Data
             builder.Entity<ApplicationUser>().HasMany(x => x.UserRooms).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.OtherId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<ApplicationUser>().HasMany(x => x.ChatMessages).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.SenderId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<ApplicationUser>().HasMany(x => x.Petitions).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.CreatedById).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<ApplicationUser>().HasMany(x => x.PetitionAddresses).WithOne(e => e.ApplicationUser).HasForeignKey(k => k.UserId).OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<GroupModel>().HasMany(x => x.Bans).WithOne(e => e.GroupModel).HasForeignKey(k => k.GroupId).OnDelete(DeleteBehavior.Cascade);
             builder.Entity<GroupModel>().HasMany(x => x.Exceptions).WithOne(e => e.GroupModel).HasForeignKey(k => k.GroupId).OnDelete(DeleteBehavior.Cascade);
@@ -315,7 +313,12 @@ namespace lumine8.Server.Data
             builder.Entity<VideoCommentOn>().HasMany(k => k.VideoComments).WithOne(e => e.VideoCommentOn).HasForeignKey(k => k.CommentId).OnDelete(DeleteBehavior.Cascade);
         
             builder.Entity<PetitionModel>().HasMany(k => k.PetitionSigs).WithOne(e => e.Petition).HasForeignKey(k => k.PetitionId).OnDelete(DeleteBehavior.Cascade);
-        */
+            
+            builder.Entity<Lived>().HasMany(x => x.PetitionAddresses).WithOne(e => e.Lived).HasForeignKey(k => k.LivedId).OnDelete(DeleteBehavior.Cascade);
+        
+            builder.Entity<Country>().HasMany(x => x.States).WithOne(e => e.Country).HasForeignKey(k => k.CountryId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<State>().HasMany(x => x.Cities).WithOne(e => e.State).HasForeignKey(k => k.StateId).OnDelete(DeleteBehavior.Cascade);
+            */
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -396,5 +399,6 @@ namespace lumine8.Server.Data
         //Petitions
         public DbSet<PetitionModel> Petitions { get; set; }
         public DbSet<PetitionSig> PetitionSigs { get; set; }
+        public DbSet<PetitionAddress> PetitionAddresses { get; set; }
     }
 }

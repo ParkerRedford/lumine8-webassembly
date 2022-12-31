@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Security.Authentication;
+using System.Text;
 using Exception = System.Exception;
 using FileResult = Microsoft.AspNetCore.Mvc.FileResult;
 using Image = lumine8_GrpcService.Image;
@@ -66,7 +67,7 @@ namespace lumine8_web.Controllers
             var file = Path.Combine(rootPath, "downloads", "lumine8.exe");
             var data = System.IO.File.ReadAllBytes(file);
 
-            return File(data, "application/octet-stream", "lumine8.exe");
+            return File(data, System.Net.Mime.MediaTypeNames.Application.Octet, "lumine8.exe");
         }
 
         public bool Authorize(HttpRequest context, string Username)
@@ -294,6 +295,54 @@ namespace lumine8_web.Controllers
             }
 
             return Ok(images);
+        }
+
+        public class UserInfo
+        {
+            public string? Name { get; set; }
+            public string? Country { get; set; }
+            public string? State { get; set; }
+            public string? City { get; set; }
+            public string? StreetName { get; set; }
+            public string? ZipCode { get; set; }
+        }
+        public class PetitionJson
+        {
+            public string? Petition { get; set; }
+            public List<UserInfo>? Signatures { get; set; } = new();
+        };
+
+        [HttpGet("{id}/{username}/{key}")]
+        public FileResult DownloadPetitionAsJson(string id, string username, string key)
+        {
+            var petition = applicationDbContext.Petitions.Where(x => x.PetitionId== id).FirstOrDefault();
+            var sigs = applicationDbContext.PetitionSigs.Where(x => x.PetitionId== id).ToList();
+
+            //Only the petitioner gets to see this information
+            Request.Headers.Add("PrivateKey", key);
+            var petitioner = applicationDbContext.Users.Where(x => x.Id == petition.CreatedById).FirstOrDefault();
+            if (username != petitioner.Username && !Authorize(Request, petitioner.Username))
+                throw new Exception();
+
+            var petitionJson = new PetitionJson
+            {
+                Petition = petition.Petition,
+            };
+
+            foreach(var s in sigs)
+            {
+                var u = applicationDbContext.Users.Where(x => x.Id == s.UserId).FirstOrDefault();
+                var address = applicationDbContext.PetitionAddresses.Where(x => x.UserId == s.UserId).FirstOrDefault();
+                var p = applicationDbContext.PlacesLived.Where(x => x.PlaceLivedId == address.LivedId).FirstOrDefault() ?? new Lived();
+                var country = applicationDbContext.Countries.Where(x => x.Id == p.CountryId).FirstOrDefault() ?? new Country();
+                var state = applicationDbContext.States.Where(x => x.Id == p.StateId).FirstOrDefault() ?? new State();
+                var city = applicationDbContext.Cities.Where(x => x.Id == p.CityId).FirstOrDefault() ?? new City();
+
+                petitionJson.Signatures?.Add(new UserInfo { Name = u.Name, Country = country.Name, State = state.Name, City = city.Name, StreetName = p.StreetName ?? string.Empty, ZipCode = p.PostalCode ?? string.Empty });
+            }
+
+            var json = JsonConvert.SerializeObject(petitionJson, Formatting.Indented);
+            return File(Encoding.ASCII.GetBytes(json), System.Net.Mime.MediaTypeNames.Application.Json, $"petition-{id}.json");
         }
     }
 }

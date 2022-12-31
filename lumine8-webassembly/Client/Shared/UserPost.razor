@@ -131,33 +131,6 @@
         hashtags = new List<MessageHashtag>();
     }
 
-    //async Task OnExecute(HtmlEditorExecuteEventArgs args)
-    //{
-    //    if (args.CommandName == "AtPerson")
-    //    {
-    //        await args.Editor.ExecuteCommandAsync(HtmlEditorCommands.InsertHtml, $"<a href=\"/u/{signedInUser.UserName}\">@{signedInUser.UserName}</a>");
-    //    }f
-    //}
-
-    //async Task InsertPerson(RadzenHtmlEditor editor)
-    //{
-    //    await editor.SaveSelectionAsync();
-
-    //    var result = await DialogService.OpenAsync("Select", ds =>
-    //@<div>
-
-    //</div>
-    //);
-
-    //    await editor.RestoreSelectionAsync();
-
-    //    if (result != null)
-    //    {
-    //        await editor.ExecuteCommandAsync(HtmlEditorCommands.InsertHtml, $"<img style=\"max-width: 100%\" src=\"{result}\">");
-    //    }
-
-    //}
-
     private async Task GetFile(InputFileChangeEventArgs e)
     {
         file.Add(e.File);

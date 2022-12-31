@@ -1,0 +1,49 @@
+﻿@page "/petition/{id}"
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+@if (render)
+{
+    <div class="card-footer d-flex flex-row">
+        <div class="d-flex flex-column">
+            <p>@p.Petition.Petition</p>
+            <p>Signatures: @p.Sigs.Count()</p>
+        </div>
+        
+        @if (authService.isAuthenticated)
+        {
+            var sig = p.Sigs.Where(x => x.UserId == p.User.Id).FirstOrDefault();
+            if (sig == null)
+            {
+                <button type="button" style="height: max-content;" @onclick="async () => p.Sigs.Add(await MainClient.SignPetitionAsync(new PetitionSig { PetitionId = p.Petition.PetitionId, UserId = p.User.Id }, authService.headers))" class="btn btn-info-fill ms-auto">
+                    <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                </button>
+            }
+            else
+            {
+                <button type="button" style="height: max-content;" @onclick="async () => p.Sigs.Remove(await MainClient.UnsignPetitionAsync(sig, authService.headers))" class="btn btn-danger-fill ms-auto">
+                    <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                </button>
+            }
+        }
+    </div>
+}
+
+
+@code {
+    private PetitionPageModel p = new();
+    private bool render = false;
+
+    [Parameter] public string id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await authService.InitializeAuthenticate();
+
+        p = await MainClient.GetPetitionAsync(new Id { Id_ = id }, authService.headers);
+
+        render = true;
+        StateHasChanged();
+    }
+}

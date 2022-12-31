@@ -87,7 +87,14 @@
 
                 @if (model.Messages.Count() > 0)
                 {
-                    <p @onclick="() => showReplies = !showReplies" class="btn-link reply my-auto ms-auto">View @model.Messages.Count() replies</p>
+                    if (showReplies)
+                    {
+                        <p @onclick="() => showReplies = !showReplies" class="btn-link reply my-auto ms-auto">Hide replies</p>
+                    }
+                    else
+                    {
+                        <p @onclick="() => showReplies = !showReplies" class="btn-link reply my-auto ms-auto">View @model.Messages.Count() replies</p>
+                    }
                 }
             </div>
         </div>
