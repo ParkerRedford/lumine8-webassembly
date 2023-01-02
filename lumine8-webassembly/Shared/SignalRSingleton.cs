@@ -13,16 +13,19 @@ namespace lumine8
         public ObservableCollection<Message> messages { get; set; } = new();
         public ObservableCollection<MessageOnMessage> onMessages { get; set; } = new();
 
-        public SignalRSingleton(HubConnection hub, NavigationManager navigation)
+        public SignalRSingleton(HubConnection hub, SingletonVariables variables)
         {
             this.hub = hub;
             this.navigation = navigation;
 
-            hub = new HubConnectionBuilder()
-                .WithAutomaticReconnect()
-                .WithUrl(navigation.ToAbsoluteUri("/postreal"))
-                .Build();
-            hub.StartAsync();
+            if (hub.State != HubConnectionState.Connected)
+            {
+                hub = new HubConnectionBuilder()
+                    .WithAutomaticReconnect()
+                    .WithUrl($"{variables.uri}/postreal")
+                    .Build();
+                hub.StartAsync();
+            }
         }
     }
 }

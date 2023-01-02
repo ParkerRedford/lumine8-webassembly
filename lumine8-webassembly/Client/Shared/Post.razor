@@ -3,7 +3,10 @@
 @inject NavigationManager navigationManager
 
 @inject SingletonVariables variables
+@inject SignalRSingleton signalr
 @inject IJSRuntime JSRuntime
+
+@implements IDisposable
 
 <style>
     .arrow {
@@ -98,7 +101,7 @@ else
 
                 async Task RemovePost()
                 {
-                    await hubConnection.SendAsync("RemovePost", model.Message);
+                    await signalr.hub.SendAsync("RemovePost", model.Message);
                     await OnClick.InvokeAsync();
                 }
             }
@@ -168,7 +171,7 @@ else
 
                                         async Task RemoveHashtag()
                                         {
-                                            await hubConnection.SendAsync("RemoveHashtag", h);
+                                            await signalr.hub.SendAsync("RemoveHashtag", h);
                                         }
                                     }
                                 </div>
@@ -177,7 +180,7 @@ else
                                     async Task AddHashtag()
                                     {
                                         var lh = new MessageHashtag { Name = hashtag, RoomId = model.RoomToMessage.RoomId };
-                                        await hubConnection.SendAsync("AddHashtag", lh);
+                                        await signalr.hub.SendAsync("AddHashtag", lh);
                                     }
                                 }
                             </DropdownContent>
@@ -330,13 +333,13 @@ else
                                         async Task voteUp()
                                         {
                                             vote = new Vote { UserId = model.SignedInUser.Id, UpDown = true, RoomId = room.RoomId, Date = Timestamp.FromDateTime(DateTime.UtcNow) };
-                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                            await signalr.hub.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
                                         }
 
                                         async Task voteDown()
                                         {
                                             vote = new Vote { UserId = model.SignedInUser.Id, UpDown = false, RoomId = room.RoomId, Date = Timestamp.FromDateTime(DateTime.UtcNow) };
-                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                            await signalr.hub.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
                                         }
                                     }
                                     else
@@ -367,13 +370,13 @@ else
                                         async Task voteUp()
                                         {
                                             vote.UpDown = true;
-                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                            await signalr.hub.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
                                         }
 
                                         async Task voteDown()
                                         {
                                             vote.UpDown = false;
-                                            await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
+                                            await signalr.hub.SendAsync("Voted", authService.loginUser, vote, room.RoomId, false);
                                         }
                                     }
                                 </div>
@@ -487,7 +490,7 @@ else
 
                 async Task PostComment()
                 {
-                    await hubConnection.SendAsync("PostComment", comment, model.Message, room.RoomId);
+                    await signalr.hub.SendAsync("PostComment", comment, model.Message, room.RoomId);
 
                     comment = new Message { SenderId = model.SignedInUser.Id };
 
@@ -533,7 +536,7 @@ else
                             messages.Remove(m);
                             StateHasChanged();
 
-                            await hubConnection.InvokeAsync("RemoveReply", m);
+                            await signalr.hub.InvokeAsync("RemoveReply", m);
                         }
                     }
                 }
@@ -553,8 +556,6 @@ else
     [Parameter] public bool all { get; set; } = true;
     [Parameter] public bool reload { get; set; } = true;
     [Parameter] public EventCallback OnClick { get; set; }
-
-    private HubConnection hubConnection;
 
     private bool render = false;
 
@@ -589,78 +590,82 @@ else
 
         comment = new Message { SenderId = model.SignedInUser.Id };
 
-        hubConnection = new HubConnectionBuilder()
-            .WithAutomaticReconnect()
-            .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/postreal"))
-            .Build();
-
-        hubConnection.On<MessageHashtag>("AddedHashtag", (hashtag) =>
+        signalr.hub.On<MessageHashtag>("AddedHashtag", (hashtag) =>
         {
-            model.MessageHashtags.Add(hashtag);
-            StateHasChanged();
-        });
-
-        hubConnection.On<MessageHashtag>("RemovedHashtag", (hashtag) =>
-        {
-            model.MessageHashtags.Remove(hashtag);
-            StateHasChanged();
-        });
-
-        hubConnection.On<Vote, SharedUser, bool>("HasVoted", async (vote, suVote, delete) =>
-        {
-            var v = model.Votes.Where(x => x.VoteId == vote.VoteId).FirstOrDefault();
-            if (v == null)
+            if (model.Room.RoomId == hashtag.RoomId)
             {
-                model.Votes.Add(vote);
-                model.SuVotes.Add(suVote);
+                model.MessageHashtags.Add(hashtag);
+                StateHasChanged();
             }
-            else
+        });
+
+        signalr.hub.On<MessageHashtag>("RemovedHashtag", (hashtag) =>
+        {
+            if (model.Room.RoomId == hashtag.RoomId)
             {
-                var sv = model.SuVotes.Where(x => x.Id == v.UserId).FirstOrDefault();
+                model.MessageHashtags.Remove(hashtag);
+                StateHasChanged();
+            }
+        });
 
-                if (v != null)
-                    model.Votes.Remove(v);
-                if (sv != null)
-                    model.SuVotes.Remove(sv);
-
-                if (!delete)
+        signalr.hub.On<Vote, SharedUser, bool>("HasVoted", async (vote, suVote, delete) =>
+        {
+            if (model.Room.RoomId == vote.RoomId)
+            {
+                var v = model.Votes.Where(x => x.VoteId == vote.VoteId).FirstOrDefault();
+                if (v == null)
                 {
                     model.Votes.Add(vote);
-                    model.SuVotes.Add(sv);
+                    model.SuVotes.Add(suVote);
                 }
+                else
+                {
+                    var sv = model.SuVotes.Where(x => x.Id == v.UserId).FirstOrDefault();
+
+                    if (v != null)
+                        model.Votes.Remove(v);
+                    if (sv != null)
+                        model.SuVotes.Remove(sv);
+
+                    if (!delete)
+                    {
+                        model.Votes.Add(vote);
+                        model.SuVotes.Add(sv);
+                    }
+                }
+
+                await Votes();
+                await UpdateVariables();
+
+                StateHasChanged();
             }
-
-            await Votes();
-            await UpdateVariables();
-
-            render = true;
-            StateHasChanged();
         });
 
-        hubConnection.On<Message>("RemovedReply", (msg) =>
+        signalr.hub.On<Message>("RemovedReply", (msg) =>
         {
-            messages.Remove(msg);
-            StateHasChanged();
+            if (model.RoomToMessage.MessageId == msg.MessageId)
+            {
+                messages.Remove(msg);
+                StateHasChanged();
+            }
         });
 
-        hubConnection.On<Message>("PostedComment", (comment) =>
+        signalr.hub.On<Message>("PostedComment", (comment) =>
         {
-            messages.Add(comment);
-            StateHasChanged();
+            if (model.RoomToMessage.MessageId == comment.MessageId)
+            {
+                messages.Add(comment);
+                StateHasChanged();
+            }
         });
 
-        hubConnection.On("RemovedPost", () =>
+        signalr.hub.On<string>("RemovedPost", (roomId) =>
         {
-            OnClick.InvokeAsync();
+            if(room.RoomId == roomId)
+                OnClick.InvokeAsync();
         });
 
-        hubConnection.On("HasRemovedRoom", () =>
-        {
-            OnClick.InvokeAsync();
-        });
-
-        await hubConnection.StartAsync();
-        await hubConnection.SendAsync("Connect", room.RoomId);
+        await signalr.hub.SendAsync("Connect", $"r_{room.RoomId}");
     }
 
     protected override async Task OnParametersSetAsync()
@@ -724,7 +729,7 @@ else
 
     async Task removeVote()
     {
-        await hubConnection.SendAsync("Voted", authService.loginUser, vote, room.RoomId, true);
+        await signalr.hub.SendAsync("Voted", authService.loginUser, vote, room.RoomId, true);
     }
 
     //async Task UpdateVotes()
@@ -757,9 +762,9 @@ else
         }
     }
 
-    //async Task IDisposable.Dispose()
-    //{
-    //    if (hubConnection.State == HubConnectionState.Connected)
-    //        await hubConnection.SendAsync("Disconnect", room.RoomId);
-    //}
+    async void IDisposable.Dispose()
+    {
+        if (signalr.hub.State == HubConnectionState.Connected)
+            await signalr.hub.SendAsync("Disconnect", $"m_{room.RoomId}");
+    }
 }

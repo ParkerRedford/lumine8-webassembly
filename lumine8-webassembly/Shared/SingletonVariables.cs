@@ -1,7 +1,5 @@
-﻿using lumine8.Client.Pages;
-using lumine8_GrpcService;
+﻿using lumine8_GrpcService;
 using Image = lumine8_GrpcService.Image;
-using Microsoft.JSInterop;
 
 namespace lumine8
 {
