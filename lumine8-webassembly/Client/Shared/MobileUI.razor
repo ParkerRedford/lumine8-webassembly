@@ -1,0 +1,65 @@
+﻿@inject SingletonVariables variables
+
+<style>
+    button {
+        border-radius: 0 !important;
+        opacity: 1 !important;
+        padding: 1rem;
+        border: none;
+        border-top: 1px solid lightgrey;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <div class="mb-5 w-100">
+        @if (Index == 0)
+        {
+            @Settings
+        }
+        else if (Index == 1)
+        {
+            @Feed
+        }
+    </div>
+
+    <div class="d-flex flex-row" style="position: fixed; bottom: 0; left: 0; width: 100%;">
+        <button class="w-100" type="button" @onclick="SettingsIndex" style="background-color: @SettingsColor; border-radius: 0.75rem 0 0 0 !important;">
+            <RadzenIcon Icon="contact_page" Style="display: flex !important; margin: auto;" />
+        </button>
+        <button class="w-100" type="button" @onclick="FeedIndex" style="background-color: @FeedColor; border-radius: 0 0.75rem 0 0 !important;">
+            <RadzenIcon Icon="view_list" Style="display: flex !important; margin: auto;" />
+        </button>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-row">
+        @Settings
+        @Feed
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment Settings { get; set; }
+    [Parameter] public RenderFragment Feed { get; set; }
+
+    private int Index = 0;
+    private string SettingsColor = "#494055", FeedColor = "";
+
+    public void SettingsIndex()
+    {
+        Index = 0;
+        SettingsColor = "#494055";
+        FeedColor = "";
+        StateHasChanged();
+    }
+
+    public void FeedIndex()
+    {
+        Index = 1;
+        SettingsColor = "";
+        FeedColor = "#494055";
+        StateHasChanged();
+    }
+}

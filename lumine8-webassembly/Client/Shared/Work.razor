@@ -1,0 +1,278 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+
+<style>
+    .list-group-item {
+        background-color: initial;
+    }
+</style>
+
+@{
+    var i = 0;
+    foreach (var w in workHistories)
+    {
+        var j = i;
+        w.Key.JobTitle = (w.Key.JobTitle != null) ? w.Key.JobTitle : "No Title";
+        w.Key.Organization = (w.Key.Organization != null) ? w.Key.Organization : "No Organization";
+        <div class="d-flex flex-row my-1">
+            <label class="mx-2 my-auto">@(w.Key.Organization) - @(w.Key.JobTitle)</label>
+
+            <div class="ms-auto my-1">
+                @if (w.Value)
+                {
+                    <button class="btn btn-info me-2" @onclick="() => workHistories[w.Key] = false">
+                        <RadzenIcon Icon="visibility" Style="display: flex !important;" />
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-info me-2" @onclick="() => workHistories[w.Key] = true">
+                        <RadzenIcon Icon="visibility_off" Style="display: flex !important;" />
+                    </button>
+                }
+            </div>
+        </div>
+
+        if (w.Value)
+        {
+            LocationInfo info = locationInfos.Where(x => x.WorkId == w.Key.WorkId).FirstOrDefault();
+
+            List<string> guids = new();
+            for (int k = 0; 10 >= k; k++)
+                guids.Add(Guid.NewGuid().ToString());
+
+            var to = w.Key.To.ToDateTime();
+            var from = w.Key.From.ToDateTime();
+
+            <div class="card card-header p-2" style="border: 0; border-bottom: 1px solid; margin: 0; background-color: initial !important;">
+                <EditForm Model="w.Key" OnValidSubmit="OnUpdate">
+                    @if (!disable)
+                    {
+                        <button type="button" @onclick="DeleteWork" class="btn btn-danger me-auto mb-1" style="width: max-content;">
+                            <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                        </button>
+
+                        async Task DeleteWork()
+                        {
+                            workHistories.Remove(await MainClient.DeleteWorkAsync(w.Key));
+                            alerts.Remove(alerts[j]);
+                        }
+                    }
+                    <div class="list-group form-group" style="border-radius: 1rem 1rem 0 0;">
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[0]">Job Title</label>
+                            @if (disable)
+                            {
+                                <p>@w.Key.JobTitle</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[0]" @bind-Value="w.Key.JobTitle" class="form-control"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[1]">Organization</label>
+                            @if (disable)
+                            {
+                                <p>@w.Key.Organization</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[1]" @bind-Value="w.Key.Organization" class="form-control"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[2]">Country</label>
+                            @if (disable)
+                            {
+                                var n = model.Countries.Where(x => x.Id == w.Key.CountryId).FirstOrDefault();
+                                <p>@n.Name</p>
+                            }
+                            else
+                            {
+                                <select id="@guids[2]" @bind="w.Key.CountryId" @oninput="GetStates" class="form-select">
+                                    @foreach (var c in model.Countries)
+                                    {
+                                        <option value="@c.Id">@(c.Name)</option>
+                                    }
+                                </select>
+
+                                async Task GetStates(ChangeEventArgs e)
+                                {
+                                    var sid = await MainClient.GetStatesAsync(new IdNumber { Id = int.Parse(e.Value.ToString()) });
+                                    cities.Clear();
+                                    states = sid.States.ToList();
+
+                                    states.AddRange(sid.States);
+                                    states = states.Distinct().ToList();
+                                }
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[3]">State</label>
+                            @if (disable)
+                            {
+                                var n = states.Where(x => x.Id == w.Key.CityId).FirstOrDefault();
+                                <p>@n.Name</p>
+                            }
+                            else
+                            {
+                                <select id="@guids[3]" @bind="w.Key.StateId" @oninput="GetCities" class="form-select">
+                                    @foreach (var s in info.states)
+                                    {
+                                        <option value="@s.Id">@(s.Name)</option>
+                                    }
+                                </select>
+
+                                async Task GetCities(ChangeEventArgs e)
+                                {
+                                    var sid = await MainClient.GetCitiesAsync(new IdNumber { Id = int.Parse(e.Value.ToString()) });
+                                    cities = sid.Cities.ToList();
+
+                                    cities.AddRange(sid.Cities);
+                                    cities = cities.Distinct().ToList();
+                                }
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[4]">City</label>
+                            @if (disable)
+                            {
+                                var n = cities.Where(x => x.Id == w.Key.CityId).FirstOrDefault();
+                                <p>@n.Name</p>
+                            }
+                            else
+                            {
+                                <InputSelect id="@guids[4]" @bind-Value="w.Key.CityId" class="form-select">
+                                    @foreach (var c in cities)
+                                    {
+                                        <option value="@c.Id">@(c.Name)</option>
+                                    }
+                                </InputSelect>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[5]">County</label>
+                            @if (disable)
+                            {
+                                <p>@w.Key.County</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[5]" @bind-Value="w.Key.County" class="form-control"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column">
+                            <label for="@guids[6]">Postal Code</label>
+                            @if (disable)
+                            {
+                                <p>@w.Key.PostalCode</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[6]" @bind-Value="w.Key.PostalCode" class="form-control"></InputText>
+                            }
+                        </div>
+                        <div class="list-group-item d-flex flex-column" style="border-radius: 0 0 1rem 1rem;">
+                            <label for="@guids[7]">Street</label>
+                            @if (disable)
+                            {
+                                <p>@w.Key.Street</p>
+                            }
+                            else
+                            {
+                                <InputText id="@guids[7]" @bind-Value="w.Key.Street" class="form-control"></InputText>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-columns d-flex mt-2">
+                        <div>
+                            <label for="@guids[8]">From</label>
+                            <InputDate id="@guids[8]" @bind-Value="from" class="form-control" disabled="@disable"></InputDate>
+                        </div>
+                        <div>
+                            <label for="@guids[9]">To</label>
+                            <InputDate id="@guids[9]" @bind-Value="to" class="form-control" disabled="@(disable || w.Key.Current)"></InputDate>
+                        </div>
+                        <div>
+                            <label for="@guids[10]">Current</label>
+                            <InputCheckbox id="@guids[10]" @bind-Value="w.Key.Current" class="form-control" disabled="@disable"></InputCheckbox>
+                        </div>
+                    </div>
+                    @if (!disable)
+                    {
+                        <MyAlert @ref="alerts[j]" Class="mt-2" />
+
+                        <button class="btn btn-success d-flex mt-2 ms-auto" style="width: max-content;" type="submit">
+                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                        </button>
+                    }
+                </EditForm>
+
+                <MyAlert @ref="alerts[j]" Class="mt-2" />
+            </div>
+
+            async Task OnUpdate()
+            {
+                w.Key.To = Timestamp.FromDateTime(to);
+                w.Key.From = Timestamp.FromDateTime(from);
+
+                var uw = await MainClient.UpdateWorkAsync(w.Key);
+                alerts[j].InvokeAlert($"Updated", MyAlert.Alerts.Success, true);
+            }
+        }
+        i++;
+    }
+}
+
+@if (!disable)
+{
+    <span class="m-2">
+        <button @onclick="CreateWork" class="btn btn-success">
+            <RadzenIcon Icon="add_circle" Style="display: flex !important;" />
+        </button>
+    </span>
+}
+
+@code {
+    [Parameter] public SharedUser User { get; set; }
+    [Parameter] public bool disable { get; set; }
+
+    public class LocationInfo
+    {
+        public string WorkId { get; set; }
+        public List<State> states { get; set; }
+        public List<City> cities { get; set; }
+    }
+
+    private List<LocationInfo> locationInfos = new();
+
+    public List<State> states = new();
+    public List<City> cities = new();
+
+    private Dictionary<WorkHistory, bool> workHistories = new();
+    private List<MyAlert> alerts = new();
+
+    private WorkHistoryResponse model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetWorkHistoryAsync(new Id { Id_ = User.Id });
+        foreach (var w in model.WorkHistories)
+        {
+            states = model.States.Where(x => x.CountryId == w.CountryId).ToList();
+            cities = model.Cities.Where(x => states.Any(y => y.Id == x.StateId)).ToList();
+            locationInfos.Add(new LocationInfo { WorkId = w.WorkId, states = states, cities = cities });
+            workHistories.Add(w, false);
+            alerts.Add(new MyAlert());
+        }
+    }
+
+    private async Task CreateWork()
+    {
+        var w = await MainClient.CreateWorkAsync(new WorkHistory { UserId = User.Id, From = new Timestamp(), To = new Timestamp() });
+        workHistories.Add(w, true);
+        locationInfos.Add(new LocationInfo { WorkId = w.WorkId });
+        alerts.Add(new MyAlert());
+    }
+}

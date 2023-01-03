@@ -1,0 +1,43 @@
+﻿@if (!string.IsNullOrEmpty(TextAlert))
+{
+    <div class="bg-@(alert.ToString().ToLower()) px-2 py-1 d-flex @Class myalert" style="opacity: 0.6; border-radius: 0.5rem; @Style">
+        <p class="my-auto" style="color: black !important;">@TextAlert</p>
+
+        <div class="d-flex ms-auto">
+            @if (Date)
+            {
+                <span class="my-auto">@DateTime.Now</span>
+            }
+            <button type="button" style="background-color: initial; border: none; color: black;" @onclick="Clear">
+                <RadzenIcon Icon="clear" Style="display: flex !important;" />
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Style { get; set; }
+
+    public bool Date { get; set; } = false;
+    private string TextAlert { get; set; }
+
+    public enum Alerts
+    {
+        Danger, Success, Info, Warning, Primary, Dark, Light, Secondary, Transparent, White
+    }
+    private Alerts alert;
+
+    public void InvokeAlert(string text, Alerts alert, bool Date = false)
+    {
+        this.Date = Date;
+        TextAlert = text;
+        this.alert = alert;
+        StateHasChanged();
+    }
+
+    public void Clear()
+    {
+        TextAlert = "";
+    }
+}

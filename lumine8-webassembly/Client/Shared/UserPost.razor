@@ -1,0 +1,196 @@
+﻿@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+@inject DialogService DialogService
+
+@inject SingletonVariables variables
+
+<div class="d-flex flex-column position-relative mt-3" style="border-radius: 1rem;">
+    @if (lumineButtons)
+    {
+        <button @onclick="Close" type="button" class="btn btn-danger-fill ms-auto me-0">
+            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+        </button>
+    }
+
+    <EditForm Model="lumine" OnValidSubmit="PostLumine" class="my-2 myform" style="z-index: 1;">
+        <RadzenHtmlEditor @bind-Value="lumine.MessageString" Placeholder="What's on your mind?" @onfocusin="() => lumineButtons = true">
+            @*<RadzenHtmlEditorCustomTool CommandName="AtPerson" Title="At Person" />*@
+            <RadzenHtmlEditorUndo />
+            <RadzenHtmlEditorRedo />
+            <RadzenHtmlEditorSeparator />
+            <RadzenHtmlEditorBold />
+            <RadzenHtmlEditorItalic />
+            <RadzenHtmlEditorUnderline />
+            <RadzenHtmlEditorStrikeThrough />
+            <RadzenHtmlEditorSeparator />
+            <RadzenHtmlEditorColor />
+            <RadzenHtmlEditorBackground />
+            <RadzenHtmlEditorRemoveFormat />
+            <RadzenHtmlEditorSeparator />
+            <RadzenHtmlEditorLink />
+            <RadzenHtmlEditorUnlink />
+        </RadzenHtmlEditor>
+
+        @if (lumineButtons)
+        {
+            <div class="d-flex flex-row mt-2">
+                <div class="d-flex w-50 flex-wrap">
+                    <MyDropdown ButtonClass="btn btn-info-fill" ContentStyle="display: flex; flex-direction: column; background-color: white;">
+                        <ButtonFragment>
+                            <RadzenIcon Icon="tag" Style="display: flex !important;" />
+                        </ButtonFragment>
+                        <DropdownContent>
+                            <div>
+                                <input @bind-value="hashtag" type="text" class="form-control" placeholder="Add tag" />
+                                <button type="button" @onclick="AddTag" class="btn btn-success-fill">
+                                    <RadzenIcon Icon="add" Style="display: flex !important;" />
+                                </button>
+                            </div>
+
+                            @if (hashtags != null && hashtags.Count() > 0)
+                            {
+                                <div class="mt-2" style="max-width: fit-content;">
+                                    @foreach (var h in hashtags)
+                                    {
+                                        <button type="button" class="btn btn-danger-fill" @onclick="() => { hashtags.Remove(h);}">@h.Name</button>
+                                    }
+                                </div>
+                            }
+                        </DropdownContent>
+                    </MyDropdown>
+
+                    <InputFile OnChange="GetFile" accept="image/*" class="my-auto mx-1"></InputFile>
+                </div>
+                <div class="ms-auto">
+                    @if (room.AllowComments)
+                    {
+                        <MyTooltip Text="Comments are allowed">
+                            <button class="btn btn-success-fill me-0" @onclick="() => room.AllowComments = !room.AllowComments" type="button">
+                                <RadzenIcon Icon="chat" Style="display: flex !important;" />
+                            </button>
+                        </MyTooltip>
+                    }
+                    else
+                    {
+                        <MyTooltip Text="Comments not allowed">
+                            <button class="btn btn-danger-fill me-0" @onclick="() => room.AllowComments = !room.AllowComments" type="button">
+                                <RadzenIcon Icon="speaker_notes_off" Style="display: flex !important;" />
+                            </button>
+                        </MyTooltip>
+                    }
+
+                    <input type="submit" value="LUMINE8" class="btn btn-primary-fill me-0" />
+                </div>
+            </div>
+
+            @if (file.Count() > 0)
+            {
+                <input type="text" @bind-value="uploadCategory" class="form-control" />
+            }
+
+            async Task AddTag()
+            {
+                if (!string.IsNullOrEmpty(hashtag))
+                {
+                    if (!hashtags.Any(x => x.Name.ToLower() != hashtag.ToLower()))
+                        hashtags.Add(new MessageHashtag { Name = hashtag });
+                }
+
+                hashtag = "";
+            }
+        }
+
+        @if (!string.IsNullOrWhiteSpace(uploadString))
+        {
+            <img class="mx-auto mt-2" style="width: 100%;" src="@(uploadString)" />
+        }
+    </EditForm>
+</div>
+
+
+@code {
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public EventCallback<Room> OnPost { get; set; }
+
+    private bool lumineButtons = false;
+
+    private Message lumine = new Message();
+    private string hashtag = "";
+    private List<MessageHashtag> hashtags = new();
+    private string uploadCategory = "Uploads";
+    private Room room = new();
+
+    private string uploadString = string.Empty;
+    private List<IBrowserFile> file = new List<IBrowserFile>(), ppFile = new List<IBrowserFile>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        room.OwnerId = signedInUser.Id;
+        room.AllowComments = true;
+        lumine = new Message { SenderId = signedInUser.Id };
+        hashtags = new List<MessageHashtag>();
+    }
+
+    private async Task GetFile(InputFileChangeEventArgs e)
+    {
+        file.Add(e.File);
+
+        string format = file.FirstOrDefault().ContentType.Substring(file.FirstOrDefault().ContentType.IndexOf('/') + 1);
+
+        var resizedImageFile = await file.FirstOrDefault().RequestImageFileAsync(format, 256, 256);
+        var buffer = new byte[resizedImageFile.Size];
+        await resizedImageFile.OpenReadStream().ReadAsync(buffer);
+        var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+        uploadString = imageDataUrl;
+        this.StateHasChanged();
+    }
+
+    private async Task Close()
+    {
+        lumine = new Message { SenderId = signedInUser.Id };
+        hashtags = new List<MessageHashtag>();
+
+        file.Clear();
+        uploadString = null;
+
+        lumineButtons = false;
+    }
+
+    private async Task PostLumine()
+    {
+        var content = new MultipartFormDataContent();
+
+        if (file.FirstOrDefault() != null && System.Text.RegularExpressions.Regex.Match(file.FirstOrDefault().ContentType, @"image/*").Success)
+        {
+            if (file.FirstOrDefault() != null)
+            {
+                Stream stream = file.FirstOrDefault().OpenReadStream(1024 * 1024);
+                MemoryStream ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+
+                content.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", file.FirstOrDefault().Name);
+            }
+        }
+
+        var jsonContent = new PostLumineContent { Lumine = lumine, Room = room, Category = uploadCategory, Hashtags = hashtags };
+
+        if (!Http.DefaultRequestHeaders.Contains("PostJson"))
+            Http.DefaultRequestHeaders.Add("PostJson", JsonConvert.SerializeObject(jsonContent));
+
+        var hPost = await Http.PostAsync($"api/PostLumine", content);
+        if(hPost.IsSuccessStatusCode)
+        {
+            file.Clear();
+            uploadString = string.Empty;
+
+            lumine = new Message { SenderId = signedInUser.Id };
+            hashtags = new List<MessageHashtag>();
+            room = new Room { OwnerId = signedInUser.Id, AllowComments = true };
+
+            lumineButtons = false;
+
+            await OnPost.InvokeAsync(await hPost.Content.ReadFromJsonAsync<Room>());
+        }
+    }
+}

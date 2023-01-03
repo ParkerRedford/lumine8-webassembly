@@ -1,0 +1,404 @@
+﻿@page "/u/p/{Username}"
+
+@using System.IO
+@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    .pictures:hover {
+        cursor: pointer;
+    }
+
+    .wing:hover {
+        cursor: pointer;
+    }
+
+    .wing {
+        user-select: none;
+    }
+
+    .imgRow {
+        border-radius: 1rem;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <style>
+        .imgRow img {
+            width: 8rem !important;
+        }
+
+        #closeModal {
+            top: 1rem !important;
+            margin-left: 1rem !important;
+        }
+    </style>
+}
+
+<MyAlert @ref="alert"></MyAlert>
+
+@if (render)
+{
+    <nav id="nav" class="m-auto">
+        <ul class="pagination m-2 d-flex flex-row flex-wrap">
+            <li class="page-item m-2" style="width: max-content;">
+                <a class="page-link text-center m-auto" href="/u/@(model.User.Username)">Profile</a>
+            </li>
+
+            <li class="page-item m-2" style="width: max-content;">
+                <a class="page-link text-center m-auto active" href="/u/p/@(model.User.Username)">Pictures</a>
+            </li>
+
+            @if (model.User.Id == model.SignedInUser.Id)
+            {
+                <li class="page-item m-2" style="width: max-content;">
+                    <a class="page-link text-center m-auto" href="/security">Security</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <a href="/u/@(model.User.Username)">User: @(model.User.Name)</a>
+
+    <div class="mt-2 w-100" style="max-width: inherit;">
+        @{
+            int i = 0;
+            foreach (var c in categories)
+            {
+                var j = i;
+                <div class="border mt-3" style="border-radius: 1rem; height: min-content; background-color: white;">
+                    <div class="card-header d-flex flex-row">
+                        <h3 class="d-flex flex-row m-0 p-0 w-100">
+                            @if (categoryEdits[c])
+                            {
+                                //var imgCat = images.Where(x => x.ImageId == category.FirstOrDefault().ImageId).FirstOrDefault();
+                                @*<EditForm Model="cat" OnValidSubmit="ChangeCategory" class="d-flex flex-row">
+                                    <InputText @bind-Value="cat" class="form-control" placeholder="@c" style="height: auto;"></InputText>
+                                    <input type="submit" class="btn btn-success ms-2" value="Change" />
+                                    </EditForm>*@
+                                //var cat = editCat.Where(x => x == c).FirstOrDefault();
+                                <input type="text" @bind-value="editCat[c]" class="form-control h-auto" style="width: initial;" />
+                                <input type="button" @onclick="ChangeCategory" value="Change" class="btn btn-success" />
+
+                                async void ChangeCategory()
+                                {
+                                    if (editCat[c] != "Profile Pictures")
+                                    {
+                                        var ch = await MainClient.ChangeCategoriesAsync(new ChangeCategoriesRequest { From = c, To = editCat[c] });
+                                        categories.Add(editCat[ch.To]);
+                                        categoryEdits.Add(editCat[ch.To], false);
+
+                                        var imgs = model.Images.Where(x => x.Category == ch.From);
+                                        foreach (var i in imgs)
+                                            i.Category = editCat[c];
+
+                                        editCat.Remove(ch.From);
+                                        categories.Remove(ch.From);
+                                    }
+                                    else
+                                    {
+                                        alert.InvokeAlert("Can't change category \"Profile Pictures\" here", MyAlert.Alerts.Warning);
+                                        StateHasChanged();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-row" style="font-size: 16pt;">
+                                    <a class="p-0 my-auto" href="/u/p/@(model.User.Username)/c/@(c)">@c</a>
+                                    <p class="arrow my-auto ms-3" @onclick="IndexDown">⮜</p>
+                                    <p class="arrow my-auto ms-3" @onclick="IndexUp">⮞</p>
+                                    <p class="my-auto ms-2">@(indexes[j] + 1) - @(indexes[j] + 4) of @(model.Images.Where(x => x.Category == c).Count())</p>
+                                </div>
+                                void IndexDown()
+                                {
+                                    indexes[j]--;
+                                    if (indexes[j] < 0)
+                                        indexes[j] = 0;
+                                }
+                                void IndexUp()
+                                {
+                                    if (indexes[j] + 4 < model.Images.Where(x => x.Category == c).Count())
+                                        indexes[j]++;
+                                }
+                            }
+
+                            @if (model.User.Id == model.SignedInUser.Id)
+                            {
+                                @if (categoryEdits[c])
+                                {
+                                    <EditForm Model="messages[j]" OnValidSubmit="CreatePostByCategory" class="d-flex flex-row ms-auto" style="height: auto;">
+                                        <InputText @bind-Value="messages[j].MessageString" class="form-control" placeholder="Message" style="height: auto;"></InputText>
+                                        <input type="submit" class="btn btn-success mx-1" value="Post" />
+                                    </EditForm>
+
+                                    <button class="btn btn-danger ms-auto" @onclick="() => categoryEdits[c] = false">
+                                        <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                    </button>
+
+                                    async Task CreatePostByCategory()
+                                    {
+                                        var cp = await MainClient.CreatePostByCategoryAsync(new CreatePostByCategoryRequest { Category = c, Message = messages[j] });
+                                        alert.InvokeAlert($"Post was created from category {cp.Category}", MyAlert.Alerts.Success, true);
+                                        categoryEdits[cp.Category] = false;
+                                    }
+                                }
+                                else
+                                {
+                                    <button class="btn btn-info ms-auto" @onclick="() => categoryEdits[c] = true">
+                                        <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                    </button>
+                                }
+                            }
+                        </h3>
+                    </div>
+
+                    <div class="d-flex flex-row overflow-auto flex-wrap justify-content-around w-100 pb-2">
+                        @foreach (var img in model.Images.Where(x => x.Category == c).Skip(indexes[j]).Take(4))
+                        {
+                            <div class="border w-auto imgRow d-flex flex-column mt-2 p-2">
+                                @if (categoryEdits[c])
+                                {
+                                    <button type="button" @onclick="RemovePicture" class="btn btn-danger" style="width: min-content;">
+                                        <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                    </button>
+
+                                    async Task RemovePicture()
+                                    {
+                                        if (img.Category == "Profile Pictures")
+                                        {
+                                            alert.InvokeAlert("Go to your profile and click \"Upload pictures\" to delete pictures from \"Profile Pictures\"", MyAlert.Alerts.Info);
+                                            return;
+                                        }
+
+                                        model.Images.Remove(await MainClient.DeleteImageAsync(img));
+                                    }
+                                }
+                                <img @onclick="() => imageModal = img" class="pictures m-auto" style="width: 10rem;" src="@variables.uri/p/u/@(model.User.Id)/@(img.FileName)" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            i++;
+        }
+    </div>
+
+    @if (Username == model.SignedInUser.Username)
+    {
+        <div id="divPad"></div>
+
+        <div id="info" class="p-2 m-2" style="width: max-content; position: fixed; bottom: 0; right: 0; border: 1px solid #655876; background-color: white; border-radius: 1rem; height: min-content;">
+            <div>
+                @foreach (var c in model.Images.Select(x => x.Category).Distinct())
+                {
+                    <button @onclick="() => category = c" class="btn btn-info m-2" style="height: min-content;">@c</button>
+                }
+            </div>
+
+            <EditForm Model="category" OnValidSubmit="UploadPictures" class="d-flex flex-column m-2">
+                <input @bind-value="category" type="text" class="form-control mb-1" placeholder="Category" />
+                <InputFile OnChange="@Upload" accept="image/*" class="my-2" multiple required />
+
+                <input style="width: max-content;" class="btn btn-success ms-auto" type="submit" value="Upload picture(s)" />
+            </EditForm>
+
+            @{
+                async void UploadPictures()
+                {
+                    if (category == "Profile Pictures")
+                    {
+                        alert.InvokeAlert("Uploading \"Profile Pictures\" not allowed here", MyAlert.Alerts.Danger);
+                        return;
+                    }
+                    try
+                    {
+                        var files = new MultipartFormDataContent();
+
+                        foreach (var f in selectedFiles)
+                        {
+                            Stream stream = f.OpenReadStream(1024 * 1024 * 1024);
+                            MemoryStream ms = new MemoryStream();
+                            await stream.CopyToAsync(ms);
+
+                            files.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", f.Name);
+                        }
+
+                        var hup = await Http.PostAsync($"api/UploadPictures/{category}", files);
+                        if (hup.IsSuccessStatusCode)
+                        {
+                            var images = await hup.Content.ReadFromJsonAsync<List<Image>>();
+
+                            selectedFiles.Clear();
+                            model.Images.AddRange(images);
+
+                            var ic = images.Select(x => x.Category).FirstOrDefault();
+                            var c = categoryEdits.Where(x => x.Key == ic).FirstOrDefault();
+                            if (c.Key == null)
+                                categoryEdits.Add(ic, false);
+
+                            categories.Add(ic);
+                            categories = categories.Distinct().ToList();
+
+                            StateHasChanged();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        alert.InvokeAlert("Error uploading files", MyAlert.Alerts.Danger);
+                    }
+                }
+            }
+        </div>
+    }
+
+    <div class="d-flex flex-row">
+        <button class="btn" type="button" @onclick="GetParentFiles">/</button>
+        @{
+            async Task GetParentFiles()
+            {
+                cd = new List<string>();
+
+                var request = new FileNamesRequest { UserId = model.User.Id };
+                request.CurrentDirectories.AddRange(cd);
+
+                var rFiles = await MainClient.GetFileNamesModelAsync(request);
+                
+                model.Directories.Clear();
+                model.Files.Clear();
+                model.Directories.AddRange(rFiles.Directories.ToList());
+                model.Files.AddRange(rFiles.Files.ToList());
+            }
+        }
+        @{
+            var k = 0;
+        }
+        @foreach (var d in cd)
+        {
+            var l = k;
+            <button class="btn" type="button" @onclick="ChangeDirectory">@d</button>
+            async Task ChangeDirectory()
+            {
+                cd.RemoveRange(l + 1, (cd.Count - 1) - l);
+
+                var re = new FileNamesRequest { UserId = model.SignedInUser.Id };
+                re.CurrentDirectories.AddRange(cd);
+                
+                var files = await MainClient.GetFileNamesModelAsync(re);
+
+                model.Directories.Clear();
+                model.Files.Clear();
+                model.Directories.AddRange(files.Directories.ToList());
+                model.Files.AddRange(files.Files.ToList());
+
+            }
+            k++;
+        }
+    </div>
+
+    <div class="d-flex flex-row">
+        @foreach (var d in model.Directories)
+        {
+            <button class="btn" type="button" @onclick="GetFiles">@d</button>
+
+            async Task GetFiles()
+            {
+                cd.Add(d);
+
+                var re = new FileNamesRequest { UserId = model.SignedInUser.Id };
+                re.CurrentDirectories.AddRange(cd);
+
+                var files = await MainClient.GetFileNamesModelAsync(re);
+
+                model.Directories.Clear();
+                model.Files.Clear();
+                model.Directories.AddRange(files.Directories.ToList());
+                model.Files.AddRange(files.Files.ToList());
+                
+                cd = files.CurrentDirectories.ToList();
+            }
+        }
+    </div>
+
+    foreach (var f in model.Files)
+    {
+        <img src="@variables.uri/p/u/@model.User.Id/@f" class="w-25" />
+    }
+
+    @if (imageModal != null)
+    {
+        <PictureModal image="imageModal" OnClick="() => imageModal = null" signedInUser="model.SignedInUser" user="model.User"></PictureModal>
+    }
+}
+
+@code {
+    [Parameter] public string Username { get; set; }
+
+    private string category = "";
+    private List<Message> messages = new();
+
+    private IDictionary<string, bool> categoryEdits = new Dictionary<string, bool>();
+
+    private List<IBrowserFile> selectedFiles = new List<IBrowserFile>();
+    private MyAlert alert;
+
+    private Image imageModal;
+    private IDictionary<string, string> editCat = new Dictionary<string, string>();
+
+    private List<int> indexes = new();
+
+    private bool render = false;
+
+    private List<string> categories = new();
+
+    private List<string> cd = new();
+
+    private PicturesPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetPicturesPageModelAsync(new Id { Id_ = Username }, authService.headers);
+
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("UserName"))
+                Http.DefaultRequestHeaders.Add("UserName", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("PrivateKey"))
+                Http.DefaultRequestHeaders.Add("PrivateKey", authService.loginUser.PrivateKey);
+        }
+
+        categories = model.Images.Select(x => x.Category).Distinct().ToList();
+        foreach (var i in model.Images.Select(x => x.Category).Distinct())
+            editCat.Add(i, i);
+
+        foreach (var b in model.Images.Select(x => x.Category).Distinct())
+        {
+            categoryEdits.Add(b, false);
+            messages.Add(new Message { MessageString = "", SenderId = model.SignedInUser.Id });
+            indexes.Add(0);
+        }
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 Pictures - {model.User.Name}");
+            await JSRuntime.InvokeVoidAsync("setDivHeight");
+        }
+    }
+
+    private void Upload(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles().ToList();
+    }
+}

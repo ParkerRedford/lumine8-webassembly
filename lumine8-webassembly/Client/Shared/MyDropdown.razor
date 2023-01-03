@@ -1,0 +1,43 @@
+﻿<div class="@Class" style="@Style">
+    <div class="position-relative" @onmouseleave="() => { if (isForce) display = false; }">
+        <button @onclick="() => display = !display" class="@ButtonClass" type="button" style="opacity: 1; @ButtonStyle">
+            <div class="d-flex flex-row" style="align-items: center;">
+                @ButtonFragment
+                @if (dArrow)
+                {
+                    if (!display)
+                    {
+                        <RadzenIcon Icon="arrow_drop_up" Style="display: flex !important; margin-left: 0.75rem; border-left: 1px solid black;" @onmouseover="() => display = true" />
+                    }
+                    else
+                    {
+                        <RadzenIcon Icon="arrow_drop_down" Style="display: flex !important; margin-left: 0.75rem; border-left: 1px solid black;" @onmouseover="() => display = true" />
+                    }
+                }
+            </div>
+        </button>
+
+        @if (display)
+        {
+            <div class="position-absolute d-block p-2 mydropdown @ContentClass" style="width: max-content; border-radius: 0.5rem; z-index: 1; border: 1px solid lightgrey; @ContentStyle">
+                @DropdownContent
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment ButtonFragment { get; set; }
+    [Parameter] public RenderFragment DropdownContent { get; set; }
+    [Parameter] public bool dArrow { get; set; } = true;
+    [Parameter] public bool isForce { get; set; } = true;
+
+    public bool display = false;
+
+    [Parameter] public string Style { get; set; }
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string ButtonClass { get; set; }
+    [Parameter] public string ButtonStyle { get; set; }
+    [Parameter] public string ContentClass { get; set; }
+    [Parameter] public string ContentStyle { get; set; }
+}

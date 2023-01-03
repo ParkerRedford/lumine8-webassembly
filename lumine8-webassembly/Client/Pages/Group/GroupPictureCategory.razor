@@ -1,0 +1,134 @@
+﻿@page "/g/p/{GroupId}/c/{Category}"
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+
+<style>
+    .img:hover {
+        cursor: pointer;
+    }
+</style>
+
+<MyAlert @ref="alert"></MyAlert>
+
+@if (render)
+{
+    <h3 class="text-center mb-5">Group: @model.Group.Name | Picture Category: @Category</h3>
+
+    <div class="d-flex flex-row flex-wrap" style="justify-content: space-evenly;">
+        @foreach (var img in images)
+        {
+            <figure class="d-flex flex-column">
+                <div class="d-flex flex-row">
+                    @if (img.Value)
+                    {
+                        if (model.SignedInUserRole.RoleType >= model.SectionRoles.UpdatePictures)
+                        {
+                            <button type="button" @onclick="() => images[img.Key] = false" class="btn btn-danger">
+                                <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                            </button>
+                        }
+                        if (model.SignedInUserRole.RoleType >= model.SectionRoles.RemovePictures)
+                        {
+                            <button type="button" @onclick="RemovePicture" class="btn btn-danger ms-auto">
+                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                            </button>
+                        }
+
+                        async void RemovePicture()
+                        {
+                            if (img.Key.Category == "Profile Pictures")
+                            {
+                                alert.InvokeAlert("Go to Upload Pictures to delete pictures from \"Profile Pictures\"", MyAlert.Alerts.Warning);
+                                return;
+                            }
+
+                            images.Remove(await MainClient.DeletePictureCategoryAsync(img.Key));
+                        }
+                    }
+                    else if (model.SignedInUserRole.RoleType >= model.SectionRoles.UpdatePictures)
+                    {
+                        <button @onclick="() => images[img.Key] = true" class="btn btn-info">
+                            <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                        </button>
+                    }
+                </div>
+
+                <img @onclick="() => modal = img.Key" style="width: 14rem;" class="img" src="@variables.uri/p/g/@(GroupId)/@(img.Key.FileName)" />
+                <figcaption class="d-flex flex-column">
+
+                    @if (!img.Value)
+                    {
+                        if (!string.IsNullOrWhiteSpace(img.Key.Description))
+                        {
+                            <p>Description: @img.Key.Description</p>
+                        }
+                    }
+                    else if (model.SignedInUserRole.RoleType >= model.SectionRoles.UpdatePictures)
+                    {
+                        <EditForm Model="img" OnValidSubmit="EditImage" class="d-flex flex-column">
+                            @if (Category != "Profile Pictures")
+                            {
+                                <InputText @bind-Value="img.Key.Category" placeholder="Category" class="form-control"></InputText>
+                            }
+                            <InputTextArea @bind-Value="img.Key.Description" placeholder="Description" class="form-control"></InputTextArea>
+
+                            <button type="submit" class="btn btn-success" style="width: min-content;">
+                                <RadzenIcon Icon="save" Style="display: flex !important;" />
+                            </button>
+                        </EditForm>
+
+                        async void EditImage()
+                        {
+                            if (img.Key.Category == "Profile Pictures")
+                            {
+                                alert.InvokeAlert("Go to Upload Pictures to edit pictures from \"Profile Pictures\"", MyAlert.Alerts.Warning);
+                                return;
+                            }
+
+                            var i = await MainClient.EditGroupImageAsync(img.Key);
+                            images[i] = false;
+                        }
+                    }
+                </figcaption>
+            </figure>
+        }
+    </div>
+
+    @if (modal != null)
+    {
+        <GroupPictureModal image="modal" group="model.Group" OnClick="() => modal = null"></GroupPictureModal>
+    }
+}
+
+@code {
+    [Parameter] public string GroupId { get; set; }
+    [Parameter] public string Category { get; set; }
+
+    private bool render = false;
+
+    private SharedUser signedInUser;
+
+    private IDictionary<GroupImage, bool> images = new Dictionary<GroupImage, bool>();
+
+    private GroupImage modal;
+    private MyAlert alert;
+
+    PCM model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetPCMAsync(new GetPCMRequest { Username = authService.loginUser.Username, GroupId = GroupId, Cagetory = Category }, authService.headers);
+
+        if (model.Banned || model.IsRole)
+            navigationManager.NavigateTo("404", true);
+
+        model.Images.ToList().ForEach(i => images.Add(i, false));
+
+        render = true;
+        StateHasChanged();
+    }
+}

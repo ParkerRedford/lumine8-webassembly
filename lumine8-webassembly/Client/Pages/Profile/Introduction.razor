@@ -1,0 +1,308 @@
+﻿@page "/introduction"
+
+@using System.IO
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject AuthenticationService authService
+@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+
+@inject SingletonVariables variables
+
+<style>
+    h5:hover, .wing:hover {
+        cursor: pointer;
+        user-select: none;
+    }
+</style>
+
+@if(variables.isDesktop)
+{
+    <style>
+        #a {
+            height: 0;
+        }
+
+        #b {
+            width: 640px;
+            margin: auto;
+        }
+
+        #grid {
+            margin: 0 3rem !important;
+        }
+    </style>
+}
+
+@if (!variables.isDesktop)
+{
+    <style>
+        #m {
+            width: 100% !important;
+        }
+    </style>
+}
+@if (render)
+{
+    <div class="mx-auto" style="max-width: 480px;" id="m">
+        @if (n == 0)
+        {
+            <h3>Crypto Standards</h3>
+            <p>Lumine8 has two ways to authenticate you. One way is to use a 24 word mnemonic with a password, and the other way is to use your private key.</p>
+            <p>It is strongly recommended that you don't clear cache nor cookies for this site. The site stores your mnemonic and private key in local storage. Please write both down just to be safe.</p>
+            <p>If you want to use multiple devices for one user, you must setup your account for each device using one of the two authentication options. Lumine8 cannot use your username and password as an authentication method because cypto requires the private key. Your mnemonic and password generates the private key.</p>
+
+            <details class="mb-5">
+                <summary>Mnemonic and private key are hidden by default</summary>
+                <div>
+                    <p>Mnemonic: @authService.loginUser.Mnemonic</p>
+                    <p>Private Key: @authService.loginUser.PrivateKey</p>
+                </div>
+            </details>
+
+            <input @onclick="() => { n = 1; }" type="button" class="btn btn-success-fill d-block mx-auto" value="Next" />
+        }
+
+        @if (n == 1)
+        {
+            <p>You can skip this process. Click <a href="/u/@model.SignedInUser.Username">here</a> to go to your profile page or click next to continue</p>
+            <p>At the end of this process, clicking finish will direct you to your profile page</p>
+
+            <br />
+            <p>Note: To go back to the introduction page, enter <q>https://lumine8.com/introduction</q> in the address bar</p>
+
+            <input @onclick="() => { n = 0; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+            <input @onclick="() => { n = 2; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+        }
+
+        @if (n == 2)
+        {
+            <ProfilePicture bUpload="true" OnClick="() => bUpload = true" User="model.SignedInUser" signedInUser="model.SignedInUser"></ProfilePicture>
+            <div class="d-flex">
+                <input @onclick="() => { n = 1; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="() => { n = 3; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+            </div>
+        }
+
+        @if (n == 3)
+        {
+            <div class="card">
+                <div class="d-flex flex-column">
+                    <h5 class="card-header">About Me</h5>
+                    <EditForm Model="model.AboutMe" OnValidSubmit="UpdateAboutMe" class="d-flex flex-column m-2">
+                        <InputTextArea @bind-Value="model.AboutMe.AboutMeDescription" class="form-control"></InputTextArea>
+                        <input type="submit" class="btn btn-success-fill" value="Save" />
+                    </EditForm>
+                </div>
+            </div>
+            <div class="d-flex">
+                <input @onclick="() => { n = 2; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="() => { n = 4; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+            </div>
+
+            async Task UpdateAboutMe()
+            {
+                await MainClient.UpdateAboutMeAsync(model.AboutMe, authService.headers);
+                n = 3;
+            }
+        }
+
+        @if (n == 4)
+        {
+            <div class="card">
+                <h5 class="card-header">Places Lived &#127960;</h5>
+                <PlaceLived User="model.SignedInUser" disable="false"></PlaceLived>
+            </div>
+
+            <div class="d-flex">
+                <input @onclick="() => { n = 3; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="() => { n = 5; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+            </div>
+        }
+
+        @if (n == 5)
+        {
+            <div class="card">
+                <h5 class="card-header">Work History &#128119;</h5>
+                <Work User="model.SignedInUser" disable="false"></Work>
+            </div>
+
+            <div class="d-flex">
+                <input @onclick="() => { n = 4; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="() => { n = 6; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+            </div>
+        }
+
+        @if (n == 6)
+        {
+            <div class="card">
+                <h5 class="card-header">Education &#128214;</h5>
+                <EducationP disable="false" User="model.SignedInUser"></EducationP>
+            </div>
+
+            <div class="d-flex">
+                <input @onclick="() => { n = 5; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="() => { n = 7; }" type="button" class="btn btn-info-fill me-auto ms-1" value="Next" />
+            </div>
+        }
+
+        @if (n == 7)
+        {
+            <Interests User="model.SignedInUser" disable="false" signedInUser="model.SignedInUser"></Interests>
+
+            <div class="d-flex">
+                <input @onclick="() => { n = 6; }" type="button" class="btn btn-danger-fill ms-auto me-1" value="Back" />
+                <input @onclick="GoToProfile" type="button" class="btn btn-success-fill me-auto ms-1" value="Finish" />
+            </div>
+
+            void GoToProfile()
+            {
+                navigationManager.NavigateTo($"/u/{model.SignedInUser.Username}", true);
+            }
+        }
+
+        <p>@(n + 1) / 8</p>
+    </div>
+}
+
+@if (bUpload)
+{
+    <div class="position-fixed" style="top: 0; left: 0; width: 100%; height: 100%; overflow: auto; z-index: 101;">
+        <div class="d-flex flex-column p-2" style="margin: auto; box-shadow: 0px 0px 1px 5000px rgba(0,0,0,0.8); background-color: white; width: max-content;">
+            <button type="button" @onclick="() => { bUpload = false; }" class="btn btn-danger ms-auto">
+                <RadzenIcon Icon="clear" Style="display: flex !important;" />
+            </button>
+
+            <InputFile OnChange="GetPPFile" accept="image/*" required></InputFile>
+            <p style="color: black !important;">Max size: 1024x1024</p>
+
+            @if (!string.IsNullOrEmpty(ppUploadString))
+            {
+                <EditForm Model="ppFile" OnValidSubmit="ppUpload" class="d-flex flex-column">
+                    <img class="m-auto" style="width: 256px; border-radius: 1rem;" src="@(ppUploadString)" />
+                    <button type="submit" disabled="@uploading" class="btn btn-success mt-2 mx-auto" style="width: max-content;">
+                        <RadzenIcon Icon="file_upload" Style="display: flex !important;" />
+                    </button>
+                </EditForm>
+
+                async Task ppUpload()
+                {
+                    if (ppFile.FirstOrDefault() != null && System.Text.RegularExpressions.Regex.Match(ppFile.FirstOrDefault().ContentType, @"image/*").Success)
+                    {
+                        uploading = true;
+                        StateHasChanged();
+
+                        var content = new MultipartFormDataContent();
+
+                        Stream stream = ppFile.FirstOrDefault().OpenReadStream(1024 * 1024);
+                        MemoryStream ms = new MemoryStream();
+                        await stream.CopyToAsync(ms);
+
+                        content.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", ppFile.FirstOrDefault().Name);
+
+                        var upp = await Http.PostAsJsonAsync($"{variables.uri}/api/UploadPP", content);
+                        if (upp.IsSuccessStatusCode)
+                        {
+                            var img = await upp.Content.ReadFromJsonAsync<Image>();
+
+                            ppFile.Clear();
+                            ppUploadString = null;
+                            model.ProfilePictures.Add(img);
+                        }
+
+                        uploading = false;
+                    }
+                }
+            }
+        </div>
+
+        <div class="d-flex" style="flex-wrap: wrap;" id="pp">
+            @foreach (var p in model.ProfilePictures)
+            {
+                <div class="d-flex flex-column m-2 p-1" style="width: min-content; border: 1px solid #464342;">
+                    <EditForm Model="p" OnValidSubmit="RemovePP" class="me-auto">
+                        <button class="btn btn-danger-fill" type="submit" style="opacity: 1;">
+                            <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                        </button>
+                    </EditForm>
+
+                    <img style="width: 256px; border-radius: 1rem;" src="@variables.uri/p/u/@(model.SignedInUser.Id)/@(p.FileName)" />
+
+                    <EditForm Model="p" OnValidSubmit="Switch" class="ms-auto">
+                        <input class="btn btn-info-fill" type="submit" value="Switch" style="opacity: 1;" />
+                    </EditForm>
+                </div>
+
+                async Task RemovePP()
+                {
+                    if (!string.IsNullOrWhiteSpace(variables.PP.ImageId))
+                    {
+                        if (p.ImageId == variables.PP.ImageId)
+                        {
+                            variables.PP = null;
+                            variables.Image = null;
+                        }
+                    }
+
+                    model.ProfilePictures.Remove(await MainClient.DeleteProfilePictureAsync(p));
+                }
+
+                async Task Switch()
+                {
+                    variables.PP = await MainClient.SwitchProfilePictureAsync(p);
+                    variables.Image = p;
+                }
+            }
+        </div>
+    </div>
+
+    async Task GetPPFile(InputFileChangeEventArgs e)
+    {
+        ppFile.Add(e.File);
+
+        string format = ppFile.FirstOrDefault().ContentType.Substring(ppFile.FirstOrDefault().ContentType.IndexOf('/') + 1);
+
+        var resizedImageFile = await ppFile.FirstOrDefault().RequestImageFileAsync(format, 1024, 1024);
+        var buffer = new byte[resizedImageFile.Size];
+        await resizedImageFile.OpenReadStream().ReadAsync(buffer);
+        var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+        ppUploadString = imageDataUrl;
+
+        this.StateHasChanged();
+    }
+}
+
+@code {
+    private bool render = false;
+
+    private bool bUpload = false, uploading = false;
+
+    private string uploadString, ppUploadString;
+    private List<IBrowserFile> file = new List<IBrowserFile>(), ppFile = new List<IBrowserFile>();
+
+    private int n = 0;
+
+    private IntroductionPageModel model = new();
+
+    private LoginUser loginUser = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("Username"))
+                Http.DefaultRequestHeaders.Add("Username", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("PrivateKey"))
+                Http.DefaultRequestHeaders.Add("PrivateKey", authService.loginUser.PrivateKey);
+        }
+
+        await authService.InitializeAuthenticate();
+
+        model = await MainClient.GetIntroductionPageModelAsync(new Empty(), authService.headers);
+
+        render = true;
+        StateHasChanged();
+    }
+}

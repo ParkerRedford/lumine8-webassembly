@@ -1,0 +1,230 @@
+﻿@import "Core";
+
+$success: #7dd42a;
+$danger: #cc1c1cad;
+$info: #82c1ff;
+
+body {
+    background-color: #e9e8ea;
+    //background-color: #70a17d14;
+}
+
+/*html, .body, .mydropdown, .input-group-text, form {
+    background-color: white;
+}*/
+
+/*form fieldset, .myform {
+    background-color: white;
+}*/
+
+.youchat {
+    background-color: lightpink;
+}
+
+.otherchat {
+    background-color: cyan;
+}
+
+.mydropdown {
+    background-color: #d3cbde !important;
+    border-color: #655876 !important;
+}
+
+.mychatbox {
+    background-color: #d3cbde !important;
+    border-color: #655876 !important;
+
+    &-chat {
+        background-color: #d3cbde !important;
+        border-color: #655876 !important;
+        border-radius: 1rem 1rem 0 0;
+    }
+}
+
+.name {
+    background-color: #32135a40 !important;
+}
+
+.mydialogform {
+    background-color: #c9bdd8;
+}
+
+.card, .field, form fieldset, .myform {
+    background-color: #c9bdd82b;
+}
+
+.form-control {
+    background-color: white;
+}
+
+.rz-html-editor-button, .rz-html-editor-colorpicker, .rz-colorpicker-trigger, .rz-colorpicker {
+    background-color: #c9bdd866 !important;
+    border-radius: 1rem !important;
+}
+
+.rz-html-editor, .rz-html-editor-content, .rz-html-editor-toolbar, .card-header {
+    background-color: #c9bdd82b !important;
+}
+
+.rz-html-editor, .rz-html-editor-content, .rz-html-editor-toolbar {
+    border-radius: 1rem !important;
+}
+
+hr {
+    border: 1px solid lightgrey;
+}
+
+#nav {
+    border: 1px solid lightgrey;
+    border-color: #655876 !important;
+    background-color: #b79ed72b;
+}
+
+.page-link {
+    background-color: #0000;
+}
+
+.navColor {
+    background-color: #452b5e;
+}
+
+header nav {
+    background-color: #3B3A4D;
+    color: white;
+}
+
+h5 {
+    color: black;
+}
+
+.name {
+    background-color: #494055;
+}
+
+.form-control:disabled, .form-control[readonly] {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+[type="button"]:not(:disabled), [type="reset"]:not(:disabled), [type="submit"]:not(:disabled), button:not(:disabled), .messages {
+    opacity: 0.8;
+    /*border-color: black;*/
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    filter: invert(100%);
+}
+
+.border-bottom {
+    border-bottom: 25px solid transparent;
+}
+
+.btn-secondary.disabled, .btn-secondary:disabled {
+    color: #000;
+    background-color: #6c757d1f;
+    border-color: #000;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #6b5876;
+}
+
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    color: black;
+    text-align: center;
+    vertical-align: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: .375rem .75rem;
+    line-height: 1.5;
+    border-radius: .25rem;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+
+    &:hover {
+        color: lightgrey;
+    }
+
+    &-link {
+        text-decoration: none;
+        color: #0071c1;
+    }
+
+    &-primary {
+        &-fill {
+            background-color: #937FAF;
+            border: none !important;
+            box-shadow: none !important;
+
+            &:hover {
+            }
+        }
+
+        &:hover {
+            box-shadow: 0 0 12px #655876;
+        }
+    }
+
+    &-info {
+        &-fill {
+            background-color: $info !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $info;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+
+    &-success {
+        &-fill {
+            background-color: $success !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $success;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+
+    &-danger {
+        &-fill {
+            background-color: $danger !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        &:hover {
+            background-color: transparent;
+            border: none !important;
+            box-shadow: none !important;
+            color: $danger;
+        }
+
+        &:not(:hover) {
+            border: none !important;
+        }
+    }
+}

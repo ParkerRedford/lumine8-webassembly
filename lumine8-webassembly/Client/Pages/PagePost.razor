@@ -1,0 +1,26 @@
+﻿@page "/r/{RoomId}"
+
+@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+
+@if (render)
+{
+    <div class="m-auto" style="width: 640px;">
+        <Post room="room" all="true"></Post>
+    </div>
+}
+
+@code {
+    [Parameter] public string RoomId { get; set; }
+    private Room room;
+
+    private bool render = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        room = await MainClient.GetPagePostAsync(new Id { Id_ = RoomId });
+
+        render = true;
+        StateHasChanged();
+    }
+}

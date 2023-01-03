@@ -1,0 +1,26 @@
+﻿<button @onclick="CallAPI" disabled="@isWaiting">
+    @ButtonContent
+</button>
+
+@if (isWaiting)
+{
+    <div class="spinner-border"></div>
+}
+
+@code {
+    [Parameter] public RenderFragment ButtonContent { get; set; }
+    [Parameter] public EventCallback Callback { get; set; }
+
+    private bool isWaiting = false;
+
+    private async void CallAPI()
+    {
+        isWaiting = true;
+        StateHasChanged();
+
+        await Callback.InvokeAsync();
+
+        isWaiting = false;
+        StateHasChanged();
+    }
+}

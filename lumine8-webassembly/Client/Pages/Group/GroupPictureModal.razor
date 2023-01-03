@@ -1,0 +1,135 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+
+<style>
+    main {
+        width: 100vh;
+        height: 100vh;
+        margin: auto;
+        width: 75%;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    @@media (max-width: 768px) {
+        #c {
+            margin: 0.25rem !important;
+            margin-top: 12rem !important;
+        }
+    }
+</style>
+
+@if (render)
+{
+    <div class="position-fixed" style="top: 0; left: 0; width: 100%; height: 100%; overflow: auto;">
+        <div style="margin: 10rem; box-shadow: 0px 0px 1px 5000px rgba(0,0,0,0.8);" id="c">
+            <div class="d-flex flex-row" style="position: relative;">
+                <a class="text-info m-0 p-0 w-100" style="background-color: #64788C;" href="/u/@(user.Username)">
+                    <p class="p-3 m-0" style="background-color: #64788C; color: white;">Uploaded by @user.Name</p>
+                </a>
+            </div>
+
+            <div style="background-color: #64788C; height: auto;" class="d-flex flex-row">
+                <MyDropdown isForce="false" Style="margin: auto;" ContentStyle="right: 0;" Class="me-2" ButtonStyle="border: 1px solid black; background-color: initial;">
+                    <ButtonFragment>
+                        <RadzenIcon Icon="comment" Style="display: flex !important;" />
+                    </ButtonFragment>
+                    <DropdownContent>
+                        <div class="d-flex flex-column" style="background-color: white;">
+                            <div class="border w-100 h-100" style="overflow: auto; border-radius: 1rem;">
+                                @foreach (var c in comments)
+                                {
+                                    var u = suUsers.Where(x => x.Id == c.UserId).FirstOrDefault();
+                                    <div class="card d-flex flex-row justify-content-between p-2 m-1 mt-2 mb-2">
+                                        <div class="flex-end">
+                                            <a @onclick="GoToPerson" class="text-info" href="/u/@(u.Username)">@u.Name</a>
+                                            <p>@c.Comment</p>
+                                        </div>
+                                        @if (u.Id == signedInUser.Id || user.Id == signedInUser.Id)
+                                        {
+                                            <button type="submit" class="btn btn-danger my-auto"  style="height: max-content;" @onclick="RemoveComment">
+                                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task RemoveComment()
+                                            {
+                                                model.Comments.Remove(await MainClient.DeleteGroupCommentAsync(c));
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <EditForm Model="comment" OnValidSubmit="Comment" class="input-group d-flex border w-100 p-2 m-auto">
+                                <InputText @bind-Value="comment.Comment" class="input-group-text" placeholder="What's on your mind?"></InputText>
+                                <button type="submit" class="btn btn-success">
+                                    <RadzenIcon Icon="send" Style="display: flex !important;" />
+                                </button>
+                            </EditForm>
+                        </div>
+                    </DropdownContent>
+                </MyDropdown>
+
+                <button @onclick="() => OnClick.InvokeAsync()" type="submit" class="btn btn-danger my-auto me-2" style="border-radius: 0;">
+                    <RadzenIcon Icon="close" Style="display: flex !important;" />
+                </button>
+
+                <div class="d-flex" id="pp">
+                    <img class="h-100 w-100" src="@variables.uri/p/g/@(group.GroupId)/@(image.FileName)" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public GroupImage image { get; set; }
+    [Parameter] public GroupModel group { get; set; }
+    [Parameter] public SharedUser user { get; set; }
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private bool render = false;
+
+    private GroupUserComment comment;
+
+    private List<SharedUser> suUsers = new();
+    private List<GroupUserComment> comments = new();
+
+    private GroupModal model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetGroupModalModelAsync(image);
+        comments = model.Comments.ToList();
+        comments = comments.OrderBy(x => x.CreateDate).ToList();
+        comment = new GroupUserComment { ImageId = image.ImageId, UserId = signedInUser.Id };
+
+        render = true;
+        StateHasChanged();
+    }
+
+    async Task Comment()
+    {
+        var c = await MainClient.AddGroupCommentAsync(comment);
+        comments.Add(c.Comment);
+        comments = comments.OrderBy(x => x.CreateDate).ToList();
+        comment = new GroupUserComment { ImageId = image.ImageId, UserId = signedInUser.Id };
+
+        model.Users.Add(c.User);
+    }
+
+    void GoToPictures()
+    {
+        navigationManager.NavigateTo($"g/m/{group.GroupId}", true);
+    }
+
+    void GoToPerson()
+    {
+        navigationManager.NavigateTo($"/u/{user.Username}", true);
+    }
+}

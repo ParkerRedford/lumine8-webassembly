@@ -1,0 +1,668 @@
+﻿@inherits LayoutComponentBase
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+
+@inject ILocalStorageService localStorage
+@inject lumine8.Client.Pages.Mobile Mobile
+
+@inject IJSRuntime JSRuntime
+
+<style>
+    * {
+        font-family: "Times New Roman", Times, serif;
+    }
+
+    body {
+        margin: 0;
+    }
+
+    #desktopnav {
+        justify-content: flex-start;
+    }
+
+    nav li {
+        border: none;
+    }
+
+    .container {
+        max-width: initial !important;
+    }
+
+    a:hover {
+        cursor: pointer;
+    }
+
+    #imgChat {
+        cursor: pointer;
+    }
+
+        #imgChat::after {
+            color: white;
+        }
+
+    #chat:hover {
+        text-decoration: none;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <style>
+        #main {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        #search a {
+            color: blue !important;
+            margin: auto !important;
+        }
+
+        li {
+            width: max-content !important;
+            margin: 0.5rem !important;
+        }
+
+        a {
+            width: max-content !important;
+            margin-right: 0.5rem;
+        }
+
+        ul {
+            flex-direction: row !important;
+        }
+
+        #comments {
+            display: none;
+        }
+
+        .navText {
+            font-size: 9pt;
+        }
+
+        #chat:hover {
+            text-decoration: none;
+        }
+    </style>
+}
+
+@if (colorMode == ColorModeEnum.Light)
+{
+    <link href="scss/LightMode.css" rel="stylesheet" />
+}
+else if (colorMode == ColorModeEnum.Dark)
+{
+    <link href="scss/DarkMode.css" rel="stylesheet" />
+}
+
+<RadzenDialog />
+<RadzenNotification />
+<RadzenTooltip />
+<RadzenContextMenu />
+
+<header class="w-100" style="position: sticky; top: 0; z-index: 99;" id="header">
+    <nav @ref="navRef" class="navbar navbar-expand-sm navbar-toggleable-sm align-items-center navbar-dark box-shadow mb-3" style="background-color: #452b5e; justify-content: center;">
+        <a class="navbar-brand align-self-center ms-3" href="/home">
+            <img src="icons/lumine8-logo.png" style="width: 6rem;" />
+            @*<p class="mb-0 navText p-2" style="font-family: Consolas; border: 2px solid white; border-radius: 0.5rem; line-height: normal;">L8</p>*@
+        </a>
+
+        @if (authService.isAuthenticated && render)
+        {
+            <a @onclick="@(() => navigationManager.NavigateTo($"/u/{model.SignedInUser.Username}", true))" class="nav-link text-light ms-1 navText">@model.SignedInUser.Name</a>
+        }
+
+        @if (variables.isDesktop)
+        {
+            <div class="d-flex flex-column navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
+                <ul class="navbar-nav flex-grow-1 align-items-center w-100">
+
+                    <li class="navbar ms-5" id="search">
+                        <a href="/search" @onclick="() => mDrop = false" class="nav-link text-light navText">Find Friends</a>
+                        <a class="nav-link text-light" href="/petitions">Petitions</a>
+                    </li>
+
+                    @if (authService.isAuthenticated && render)
+                    {
+                        <li class="d-flex flex-row ms-auto position-relative">
+                            <span class="my-auto">@notificationFrag</span>
+                            <MyDropdown ContentStyle="right: 0;" ButtonStyle="border: none;" ButtonClass="navColor mx-3" isForce="false" dArrow=false>
+                                <ButtonFragment>
+                                    <img src="/icons/Bubbles_chat_conversation_message-512.png" style="width: 3rem; height: 3rem; filter: invert(1);" />
+                                    @if (model.Notifications.Count() > 0)
+                                    {
+                                        <div style="border-radius: 1rem; position: absolute; width: 24px; height: 24px; background-color: red; top: 0; right: 0;">
+                                            <p style="color: white;">@(model.Notifications.Count())</p>
+                                        </div>
+                                    }
+                                </ButtonFragment>
+                                <DropdownContent>
+                                    <button type="button" @onclick="ClearNotifications" class="btn btn-link">Clear all</button>
+                                    @{
+                                        async Task ClearNotifications()
+                                        {
+                                            var dn = await MainClient.DeleteNotificationsAsync(new Empty(), authService.headers);
+                                            model.Notifications.Clear();
+                                        }
+                                    }
+                                    @foreach (var n in model.Notifications)
+                                    {
+                                        <div class="d-flex flex-row" style="color: black; white-space: pre-line;">
+                                            @((MarkupString)n.Message)
+                                            <button type="button" class="btn btn-danger ms-3" @onclick="async () => model.Notifications.Remove(await MainClient.DeleteNotificationAsync(n, authService.headers))">
+                                                <RadzenIcon Icon="delete" Style="display: flex !important;"></RadzenIcon>
+                                            </button>
+                                        </div>
+
+                                        <hr />
+                                    }
+                                </DropdownContent>
+                            </MyDropdown>
+                        </li>
+                    }
+
+                    @{
+                        string ms = string.Empty;
+                        if (!authService.isAuthenticated)
+                            ms = "ms-auto";
+                    }
+
+                    <li class="@ms">
+                        <select @bind="colorMode" class="form-select" @oninput="ChangeColorMode">
+                            <option value="@ColorModeEnum.Dark">Dark</option>
+                            <option value="@ColorModeEnum.Light">Light</option>
+                        </select>
+                    </li>
+
+                    @{
+                        async Task ChangeColorMode(ChangeEventArgs e)
+                        {
+                            switch (e.Value.ToString())
+                            {
+                                case "Dark":
+                                    colorMode = ColorModeEnum.Dark;
+                                    break;
+                                case "Light":
+                                    colorMode = ColorModeEnum.Light;
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            await localStorage.SetItemAsync("ColorMode", colorMode);
+                            StateHasChanged();
+                        }
+                    }
+
+                    @if (authService.isAuthenticated)
+                    {
+                        <li class="d-flex flex-row ms-auto mx-3">
+                            <a href="/CryptoFund">
+                                <img src="/eth-diamond-purple.webp" class="me-4" style="height: 3rem;" />
+                            </a>
+                            <LoginDisplay></LoginDisplay>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="d-flex flex-row ms-auto mx-3">
+                            <a href="/CryptoFund" class="me-3">
+                                <img src="/eth-diamond-purple.webp" style="height: 3rem;" />
+                            </a>
+                            <LoginDisplay></LoginDisplay>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <a href="/CryptoFund" class="ms-auto">
+                <img src="/eth-diamond-purple.webp" class="me-4" style="height: 3rem;" />
+            </a>
+
+            @if (authService.isAuthenticated && render && variables.isDesktop)
+            {
+                <MyDropdown Class="ms-auto" ContentStyle="right: 0;" ButtonStyle="border: none;" ButtonClass="navColor mx-3" isForce="false" dArrow=false>
+                    <ButtonFragment>
+                        <img src="/icons/Bubbles_chat_conversation_message-512.png" style="width: 3rem; height: 3rem; filter: invert(1);" />
+                        @if (model.Notifications.Count() > 0)
+                        {
+                            <div style="border-radius: 1rem; position: absolute; width: 24px; height: 24px; background-color: red; top: 0; right: 0;">
+                                <p>@(model.Notifications.Count())</p>
+                            </div>
+                        }
+                    </ButtonFragment>
+                    <DropdownContent>
+                        @foreach (var n in model.Notifications)
+                        {
+                            <div class="d-flex flex-row" style="color: black; white-space: pre-line;">
+                                @((MarkupString)n.Message)
+                                <button type="button" class="btn btn-danger ms-3" @onclick="async () => model.Notifications.Remove(await MainClient.DeleteNotificationAsync(n, authService.headers))">
+                                    <RadzenIcon Icon="delete" Style="display: flex !important;"></RadzenIcon>
+                                </button>
+                            </div>
+
+                            <hr />
+                        }
+                    </DropdownContent>
+                </MyDropdown>
+            }
+
+            <button type="button" @onclick="() => mDrop = !mDrop" class="btn btn-info me-1 py-0 px-1">
+                <RadzenIcon Icon="list" Style="display: flex !important;"></RadzenIcon>
+            </button>
+
+            if (mDrop)
+            {
+                <ul class="flex-column align-items-start w-100" style="position: relative; text-decoration: none; list-style: none; border-top: 1px solid darkgrey;">
+                    <li class="ms-0">
+                        <a href="/search" class="nav-link text-light navText ms-0 ps-0">Find Friends</a>
+                        <a class="nav-link text-light" href="/petitions">Petitions</a>
+                    </li>
+
+                    <li class="ms-0">@notificationFrag</li>
+
+                    <li class="ms-auto d-flex flex-row text-light">
+                        <LoginDisplay></LoginDisplay>
+                    </li>
+                </ul>
+            }
+        }
+    </nav>
+</header>
+
+<div class="container">
+    <main id="main" class="m-auto" role="main" style="width: 75%; display: flex; flex-direction: column;">
+        <MyAlert @ref="alert" Class="mb-2" />
+        @Body
+
+        @if (render && authService.isAuthenticated && variables.isDesktop)
+        {
+            <div @ref="chatsRef" class="d-flex flex-row" style="position: fixed; bottom: 0; justify-content: end;">
+                @if (chats != null)
+                {
+                    foreach (var c in chats)
+                    {
+                        <lumine8_maui.Pages.Profile.ChatPerson UserId="@c" Close="CloseChat" signedInUser="model.SignedInUser"></lumine8_maui.Pages.Profile.ChatPerson>
+                        async Task CloseChat()
+                        {
+                            chats.Remove(c);
+                            await localStorage.SetItemAsync("ChatRooms", chats);
+                        }
+                    }
+                }
+            </div>
+            <div @ref="friendsRef" class="d-flex flex-row m-0" style="position: fixed; bottom: 0; right: 0; overflow: auto; z-index: 1;">
+                @if (dChats)
+                {
+                    <div class="mychatbox p-2" style="overflow: auto;">
+                        <div class="d-flex flex-row">
+                            <input type="text" class="form-control" style="height: auto;" placeholder="Search" @oninput="(EventArgs) => Search(EventArgs.Value.ToString())" />
+                            <button type="button" class="btn btn-danger" @onclick="CloseChats">
+                                <RadzenIcon Icon="close" Style="display: flex !important;"></RadzenIcon>
+                            </button>
+                        </div>
+                        @{
+                            async Task CloseChats()
+                            {
+                                dChats = false;
+
+                                await Task.Yield();
+                                await JSRuntime.InvokeVoidAsync("setChatWidth", chatsRef, friendsRef);
+                            }
+                        }
+                        <div class="d-flex flex-column">
+                            @foreach (var f in model.Friends)
+                            {
+                                <div class="d-flex flex-row">
+                                    <button type="button" @onclick="AddChat" class="btn btn-link">@f.Name</button>
+                                    <a href="u/@f.Username" @onclick="@(() => navigationManager.NavigateTo($"u/{f.Username}", true))" class="ms-auto">
+                                        <RadzenIcon Icon="link" Style="display: flex !important;"></RadzenIcon>
+                                    </a>
+                                </div>
+
+                                async Task AddChat()
+                                {
+                                    chats.Add(f.Id);
+                                    chats = chats.Distinct().ToList();
+
+                                    await localStorage.SetItemAsync("ChatRooms", chats);
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-info-fill m-2 mt-auto" @onclick="OpenChats">
+                        <RadzenIcon Icon="chat" Style="display: flex !important;"></RadzenIcon>
+                    </button>
+
+                    async Task OpenChats()
+                    {
+                        dChats = true;
+                        await Task.Yield();
+
+                        await JSRuntime.InvokeVoidAsync("setChatWidth", chatsRef, friendsRef);
+                        await JSRuntime.InvokeVoidAsync("setFriendsHeight", friendsRef, navRef);
+                    }
+                }
+            </div>
+
+            async Task Search(string value)
+            {
+                model.Friends.AddRange(lfriends.Where(x => x.Name.ToLower().Contains(value.ToLower()) || x.Username.ToLower().Contains(value.ToLower())));
+            }
+        }
+    </main>
+</div>
+
+<MyDialog @ref="updateDialog" Title="Update">
+    <Content>
+        <p>There is a new update click <a href="https://lumine8.com" target="_blank">here</a> to download and install.</p>
+    </Content>
+</MyDialog>
+
+@code {
+    private MyDialog updateDialog = new();
+    private string SearchStr { get; set; } = "";
+
+    private bool mDrop = false, render = false, dChat = false, dChats;
+
+    private MyAlert alert;
+    private RenderFragment notificationFrag { get; set; }
+
+    private int searchTake = 0;
+
+    private IQueryable<SharedUser> people, lfriends;
+    private List<string> chats = new();
+    private ElementReference friendsRef, navRef, chatsRef;
+
+    private bool hashtags = false;
+
+    private bool dMessages = false, dSearch = false, dNotify = false, bChat = false;
+
+    private HubConnection chatHub, notifyHub;
+
+    private ColorModeEnum colorMode { get; set; } = ColorModeEnum.Dark;
+
+    private MainLayoutModel model = new();
+
+    private string chatRoomUser = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        colorMode = await localStorage.GetItemAsync<ColorModeEnum>("ColorMode");
+
+        await authService.InitializeAuthenticate();
+
+        await Mobile.Initialize();
+        variables.isDesktop = !Mobile.isMobile();
+
+        notifyHub = new HubConnectionBuilder()
+    .WithAutomaticReconnect()
+    .WithUrl(navigationManager.ToAbsoluteUri("/notify"))
+    .Build();
+
+        if (variables.isDesktop && authService.isAuthenticated)
+        {
+            chatHub = new HubConnectionBuilder()
+    .WithAutomaticReconnect()
+    .WithUrl(navigationManager.ToAbsoluteUri("/chathub"))
+    .Build();
+
+            await chatHub.StartAsync();
+            await notifyHub.StartAsync();
+        }
+
+        if (authService.isAuthenticated)
+        {
+            model = await MainClient.GetMainLayoutModelAsync(new Empty(), authService.headers);
+
+            lfriends = model.Friends.AsQueryable();
+
+            var lChats = await localStorage.GetItemAsync<List<string>>("ChatRooms");
+            if (lChats != null)
+                chats = lChats;
+
+            notificationFrag =
+    @<li class="m-auto">
+        <MyDropdown ButtonClass="btn btn-info-fill" ButtonStyle="position: relative;" ContentClass="myform" ContentStyle="@((!variables.isDesktop) ? "left: 0;" : "right: 0;")">
+                <ButtonFragment>
+                    <img src="/icons/bell.png" class="my-auto" style="width: 1rem; height: 1rem;" />
+
+                    @if (model.Requests.Count() + model.GroupRequests.Count() > 0)
+                {
+                        <div style="border-radius: 1rem; position: absolute; width: 24px; height: 24px; background-color: red; top: -25%; right: -25%;">
+                            <p style="color: white;">@(model.Requests.Count() + model.GroupRequests.Count())</p>
+                        </div>
+                }
+                </ButtonFragment>
+                <DropdownContent>
+                    <div style="border-radius: 1rem;">
+                        @if (model.Requests.Count() > 0)
+                    {
+                            <div>
+                                <p class="text-center">Friends</p>
+                                @foreach (var r in model.Requests)
+                            {
+                                var u = model.SuRequests.Where(x => x.Id == r.SenderId).FirstOrDefault();
+                                var pp = model.ProfilePictureRequests.Where(x => x.UserId == r.SenderId).FirstOrDefault();
+                                    <div class="card p-2 m-1" style="border-radius: 1rem;">
+                                        <a @onclick="() => dNotify = false" href="/u/@(u.Username)">@u.Name</a>
+
+                                        @if (pp == null)
+                                    {
+                                            <a @onclick="() => dNotify = false" href="/u/@(u.Username)">
+                                                <img class="card-img p-0" style="width: 10rem;" src="/p/No_image_available.svg" />
+                                            </a>
+                                    }
+                                    else
+                                    {
+                                        var img = model.Images.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+
+                                            <a @onclick="() => dNotify = false" href="/u/@(u.Username)">
+                                                <img style="width: 10rem;" class="card-img p-0" src="@variables.uri/p/u/@(u.Id)/@(img.FileName)" />
+                                            </a>
+                                    }
+
+                                        <div class="card-footer d-flex flex-row border p-1" style="border-radius: 1rem;">
+                                            <EditForm Model="r" OnValidSubmit="Accept">
+                                                <input class="btn btn-success-fill" type="submit" value="Accept" />
+                                            </EditForm>
+                                            <EditForm Model="r" OnValidSubmit="Decline">
+                                                <input class="btn btn-danger-fill" type="submit" value="Decline" />
+                                            </EditForm>
+                                        </div>
+                                    </div>
+
+                                async Task Accept()
+                                {
+                                    var af = await MainClient.AcceptFriendRequestAsync(r);
+
+                                    var re = model.Requests.Where(x => x.RequestId == af.RequestId).FirstOrDefault();
+                                    var pp = model.ProfilePictureRequests.Where(x => x.UserId == af.SenderId).FirstOrDefault();
+                                    var uRequest = model.SuRequests.Where(x => x.Id == af.SenderId).FirstOrDefault();
+                                    var uImgRequest = model.Images.Where(x => x.UserId == af.SenderId).FirstOrDefault();
+
+                                    model.Requests.Remove(r);
+                                    model.SuRequests.Remove(uRequest);
+                                    if (pp != null)
+                                        model.ProfilePictureRequests.Remove(pp);
+                                    if (uImgRequest != null)
+                                        model.Images.Remove(uImgRequest);
+
+                                    alert.InvokeAlert($"You are now friends with {u.Name}", MyAlert.Alerts.Success);
+                                }
+
+                                async Task Decline()
+                                {
+                                    var dr = await MainClient.DeclineFriendRequestAsync(r);
+
+                                    var re = model.Requests.Where(x => x.RequestId == dr.RequestId).FirstOrDefault();
+                                    var pp = model.ProfilePictureRequests.Where(x => x.UserId == dr.SenderId).FirstOrDefault();
+                                    var uRequest = model.SuRequests.Where(x => x.Id == dr.SenderId).FirstOrDefault();
+                                    var uImgRequest = model.Images.Where(x => x.UserId == dr.SenderId).FirstOrDefault();
+
+                                    model.Requests.Remove(r);
+                                    model.SuRequests.Remove(uRequest);
+                                    if (pp != null)
+                                        model.ProfilePictureRequests.Remove(pp);
+                                    if (uImgRequest != null)
+                                        model.Images.Remove(uImgRequest);
+
+                                    alert.InvokeAlert($"You declined a friend request from {u.Name}", MyAlert.Alerts.Info);
+                                }
+                            }
+                            </div>
+                    }
+
+                        @if (model.Groups.Count() > 0)
+                    {
+                            <div style="border-radius: 1rem;">
+                                <p class="text-center" style="color: black;">Groups</p>
+                                @foreach (var gr in model.GroupRequests)
+                            {
+                                var g = model.Groups.Where(x => x.GroupId == gr.GroupId).FirstOrDefault();
+                                var pp = model.GroupProfilePictureRequests.Where(x => x.GroupId == gr.GroupId).FirstOrDefault();
+
+                                    <div class="card p-1 p-2">
+                                        <a @onclick="() => dNotify = false" href="/g/@(g.GroupId)">@g.Name</a>
+                                        @if (pp == null)
+                                    {
+                                            <a @onclick="() => dNotify = false" href="/g/@(g.GroupId)">
+                                                <img style="width: 3rem;" class="card-img p-0" src="/p/No_image_available.svg" />
+                                            </a>
+                                    }
+                                    else
+                                    {
+                                        var gImg = model.GroupImages.Where(x => x.ImageId == pp.ImageId).FirstOrDefault();
+
+                                            <a @onclick="() => dNotify = false" href="/g/@(g.GroupId)">
+                                                <img style="width: 3rem;" class="card-img p-0" src="@variables.uri/p/g/@(g.GroupId)/@(gImg.FileName)" />
+                                            </a>
+                                    }
+
+                                        <div class="card-footer d-flex flex-row border p-1" style="border-radius: 1rem;">
+                                            <EditForm Model="gr" OnValidSubmit="Accept">
+                                                <input class="btn btn-success" type="submit" value="Accept" />
+                                            </EditForm>
+                                            <EditForm Model="gr" OnValidSubmit="Decline">
+                                                <input class="btn btn-danger" type="submit" value="Decline" />
+                                            </EditForm>
+                                        </div>
+                                    </div>
+
+                                async Task Accept()
+                                {
+                                    var ar = await MainClient.AcceptGroupRequestAsync(gr);
+
+                                    var r = model.GroupRequests.Where(x => x.RequestId == ar.RequestId).FirstOrDefault();
+                                    var pp = model.GroupProfilePictureRequests.Where(x => x.GroupId == ar.GroupId).FirstOrDefault();
+                                    var grRequest = model.Groups.Where(x => x.GroupId == ar.GroupId).FirstOrDefault();
+                                    var gImgRequest = model.GroupImages.Where(x => x.GroupId == ar.GroupId).FirstOrDefault();
+
+                                    model.GroupRequests.Remove(r);
+                                    model.Groups.Remove(grRequest);
+                                    if (pp != null)
+                                        model.GroupProfilePictureRequests.Remove(pp);
+                                    if (gImgRequest != null)
+                                        model.GroupImages.Remove(gImgRequest);
+                                }
+
+                                async void Decline()
+                                {
+                                    var dr = await MainClient.DeclineGroupRequestAsync(gr);
+
+                                    var r = model.GroupRequests.Where(x => x.RequestId == dr.RequestId).FirstOrDefault();
+                                    var pp = model.GroupProfilePictureRequests.Where(x => x.GroupId == dr.GroupId).FirstOrDefault();
+                                    var grRequest = model.Groups.Where(x => x.GroupId == dr.GroupId).FirstOrDefault();
+                                    var gImgRequest = model.GroupImages.Where(x => x.GroupId == dr.GroupId).FirstOrDefault();
+
+                                    model.GroupRequests.Remove(r);
+                                    model.Groups.Remove(grRequest);
+                                    if (pp != null)
+                                        model.GroupProfilePictureRequests.Remove(pp);
+                                    if (gImgRequest != null)
+                                        model.GroupImages.Remove(gImgRequest);
+                                }
+                            }
+                            </div>
+                    }
+                    </div>
+                </DropdownContent>
+            </MyDropdown>
+    </li>
+    ;
+            render = true;
+            StateHasChanged();
+
+            if (variables.isDesktop)
+            {
+                await JSRuntime.InvokeVoidAsync("setChatWidthInitial", chatsRef, friendsRef);
+
+                await chatHub.SendAsync("Connect", model.SignedInUser.Id);
+                await chatHub.SendAsync("Online", model.SignedInUser.Id);
+
+                await notifyHub.SendAsync("Connect", model.SignedInUser.Id);
+
+                chatHub.On<string>("OpenedRoom", async (UserId) =>
+                {
+                    chats.Add(UserId);
+                    chats = chats.Distinct().ToList();
+                    StateHasChanged();
+
+                    await localStorage.SetItemAsync("ChatRooms", chats);
+                    await JSRuntime.InvokeVoidAsync("setChatWidth", chatsRef, friendsRef);
+                });
+
+                chatHub.On<Notification, string>("SentNotification", async (notify, UserId) =>
+                {
+                    if (notify.UserId == model.SignedInUser.Id)
+                        await MainClient.DeleteNotificationAsync(notify, authService.headers);
+
+                    chats.Add(UserId);
+                    chats = chats.Distinct().ToList();
+                    StateHasChanged();
+
+                    await JSRuntime.InvokeVoidAsync("setChatWidth", chatsRef, friendsRef);
+                });
+
+                notifyHub.On<Request, lumine8_GrpcService.ProfilePicture, SharedUser, Image>("FriendRequestSent", (req, pp, u, img) =>
+                {
+                    model.SuRequests.Add(u);
+                    if (pp != null)
+                        model.ProfilePictureRequests.Add(pp);
+                    model.Requests.Add(req);
+                    if (img != null)
+                        model.Images.Add(img);
+                    StateHasChanged();
+                });
+
+                notifyHub.On<GroupRequest, GroupModel, GroupProfilePicture, GroupImage>("GroupRequestSent", (req, g, pp, gimg) =>
+                {
+                    model.GroupRequests.Add(req);
+                    model.Groups.Add(g);
+                    if (pp != null)
+                        model.GroupProfilePictureRequests.Add(pp);
+                    if (gimg != null)
+                        model.GroupImages.Add(gimg);
+                    StateHasChanged();
+                });
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+
+        }
+    }
+}

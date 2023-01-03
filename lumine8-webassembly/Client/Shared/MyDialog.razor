@@ -1,0 +1,42 @@
+﻿@if(display)
+{
+    <div style="position: fixed; overflow: auto; z-index: 1001; background-color: #838383c4; top: 0; left: 0; width: 100% !important; height: 100% !important;" class="d-flex w-100">
+        <div class="mydialogform m-auto w-75 p-3" style="border: 1px solid black; border-radius: 1rem;">
+            <div class="d-flex flex-row" style="border-radius: 1rem !important; border: none;">
+                <h3 class="card-header my-auto">@Title</h3>
+                @if(CustomClose)
+                {
+                    @Button
+                }
+                else
+                {
+                    <button type="button" class="btn btn-danger ms-auto" style="border: none;" @onclick="() => display = false">
+                        <RadzenIcon Icon="close" Style="display: flex !important;" />
+                    </button>
+                }
+            </div>
+
+            <div class="mt-2">@Content</div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment Content { get; set; }
+    [Parameter] public RenderFragment Button { get; set; }
+    [Parameter] public bool CustomClose { get; set; } = false;
+
+    public bool display = false;
+
+    public Task InvokeDisplay()
+    {
+        if (!CustomClose)
+        {
+            display = true;
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,76 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+@inject SingletonVariables variables
+@implements IDisposable
+
+@if (render)
+{
+    <div class="card text-center" style="min-width: max-content;">
+        <div class="card d-flex flex-row align-items-center name">
+            <div class="w-100">
+                <p class="m-0" style="border-radius: 1rem;">@User.Name</p>
+                <p class="m-0" style="border-radius: 1rem;">@@@(User.Username)</p>
+            </div>
+        </div>
+        <div class="d-flex flex-row p-0 pb-2 justify-content-center" id="pp">
+            <div class="d-flex flex-column">
+                @if (model.ProfilePicture != null && !string.IsNullOrWhiteSpace(model.ProfilePicture.ProfilePictureId))
+                {
+                    <img class="align-self-center mx-2 my-auto" style="width: 192px !important; border-radius: 1rem;" src="@variables.uri/p/u/@(User.Id)/@(model.Image.FileName)" />
+                }
+                else
+                {
+                    <img class="align-self-center mx-2 my-auto" style="width: 192px !important;" src="/p/No_image_available.svg" />
+                }
+                @if (User.Id == signedInUser.Id && bUpload)
+                {
+                    <button @onclick="() => OnClick.InvokeAsync()" class="btn btn-primary-fill m-2" style="opacity: 1;">
+                        Upload picture
+                    </button>
+                }
+            </div>
+
+            <div class="p-2" style="line-height: initial;">
+                <About User="User" signedInUser="signedInUser" Callback="StateHasChanged"></About>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public SharedUser User { get; set; }
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public bool bUpload { get; set; } = false;
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private bool dUpload = false;
+    private bool render = false;
+
+    public ProfilePicturePageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetProfilePictureAsync(new Id { Id_ = User.Id });
+
+        render = true;
+        StateHasChanged();
+
+        variables.OnChange += OnChangeEvent;
+    }
+
+    protected void OnChangeEvent()
+    {
+        if (variables.Image.UserId == model.Image.UserId)
+        {
+            model.ProfilePicture = variables.PP;
+            model.Image = variables.Image;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        variables.OnChange -= OnChangeEvent;
+    }
+}

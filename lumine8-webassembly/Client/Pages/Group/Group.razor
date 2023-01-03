@@ -1,0 +1,870 @@
+﻿@page "/g/{GroupId}"
+
+@using System.IO
+@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    [contentEditable=true]:empty:not(:focus):before {
+        content: attr(data-text)
+    }
+
+    div:empty:before {
+        content: attr(data-placeholder);
+        color: gray;
+    }
+
+    #nav ul {
+        list-style-type: none;
+    }
+
+    .wing {
+        user-select: none;
+        cursor: pointer;
+    }
+
+    @@media (min-width: 769px) {
+        main {
+            width: 100% !important;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        #grid {
+            padding: 1rem 0 !important;
+        }
+
+        #feed {
+            position: inherit !important;
+            max-width: 100% !important;
+        }
+
+        #profile {
+            margin: 0;
+            flex-direction: column;
+        }
+    }
+</style>
+
+<RadzenDialog />
+<RadzenNotification />
+<RadzenTooltip />
+<RadzenContextMenu />
+
+@if (render)
+{
+    <div class="d-flex flex-column w-100">
+        <div class="d-flex flex-row">
+            <p class="text-left" id="mCount">Members: @model.Roles.Count()</p>
+            <MyAlert @ref="alert" />
+        </div>
+        <nav id="nav">
+            <ul class="d-flex pagination w-100 m-2 align-items-center flex-wrap">
+                <li class="ms-0">
+                    <ul class="d-flex flex-row p-0">
+                        <li class="page-item m-2">
+                            <a href="/g/@GroupId" style="width: max-content;" class="m-auto page-link active">Group Page</a>
+                        </li>
+                        @if (authService.isAuthenticated && model.SignedInUserRole.RoleType > RoleType.NoRole)
+                        {
+                            <li class="page-item m-2">
+                                <a href="/g/m/@(GroupId)" style="width: max-content;" class="page-link m-auto">Membership</a>
+                            </li>
+                        }
+
+                        @if (model.SignedInUserRole.RoleType >= model.SectionRoles.Pictures)
+                        {
+                            <li class="page-item m-2">
+                                <a href="/g/p/@(GroupId)" style="width: max-content;" class="page-link m-auto">Pictures</a>
+                            </li>
+                        }
+                    </ul>
+                </li>
+                <li>
+                    @if (authService.isAuthenticated && model.SignedInUserRole.RoleType != RoleType.NoRole)
+                    {
+                        <div class="form-check form-switch m-2">
+                            <input @onchange="SetPriority" checked="@(model.SignedInUserRole.Priority)" id="Priority" type="checkbox" class="form-check-input" />
+                            <label class="form-check-label" for="Priority">Higher Priority</label>
+                        </div>
+
+                        async Task SetPriority()
+                        {
+                            var sp = await MainClient.SetPriorityAsync(model.SignedInUserRole, authService.headers);
+                            model.SignedInUserRole = sp;
+                            alert.InvokeAlert($"Higher priority: {model.SignedInUserRole.Priority}", MyAlert.Alerts.Info);
+                        }
+                    }
+                </li>
+                <li class="d-flex flex-row align-items-baseline" style="border-left: 1px solid lightgrey; border-right: 1px solid lightgrey;">
+                    @if (authService.isAuthenticated && model.GroupModel.OwnerId == model.SignedInUser.Id)
+                    {
+                        <div class="form-check form-switch m-2">
+                            <input @onchange="SetSecurity" id="Security" checked="@(model.Security)" type="checkbox" class="form-check-input" />
+                            <label class="form-check-label" for="Security">Private</label>
+                        </div>
+
+                        async Task SetSecurity()
+                        {
+                            var gs = await MainClient.SetSecurityAsync(new GroupSecurity { BSecurity = model.Security, Group = model.GroupModel, Security = model.GroupModel.Security }, authService.headers);
+                            model.GroupModel = gs.Group;
+                            model.Security = gs.BSecurity;
+                            alert.InvokeAlert($"Group is now {model.GroupModel.Security}", MyAlert.Alerts.Info);
+                        }
+
+                        <select @bind="model.GroupModel.GroupJoin" class="form-select me-2" @oninput="SetJoin">
+                            @foreach (var r in System.Enum.GetValues(typeof(Join)))
+                            {
+                                <option value="@r">@r</option>
+                            }
+                        </select>
+
+                        async Task SetJoin(ChangeEventArgs e)
+                        {
+                            Join join = Join.Invite;
+
+                            switch (e.Value.ToString())
+                            {
+                                case "Invite":
+                                    join = Join.Invite;
+                                    break;
+                                case "Approval":
+                                    join = Join.Approval;
+                                    break;
+                                case "Anonymous":
+                                    join = Join.Anonymous;
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            model.GroupModel.GroupJoin = join;
+
+                            var gj = await MainClient.SetGroupJoinAsync(model.GroupModel, authService.headers);
+                            alert.InvokeAlert($"People can now join by {gj.GroupJoin}", MyAlert.Alerts.Info);
+                        }
+                    }
+                </li>
+                <li class="ms-auto me-3">
+                    @if (authService.isAuthenticated)
+                    {
+                        @if (model.SignedInUserRole.RoleType == RoleType.NoRole)
+                        {
+                            if (model.GroupModel.GroupJoin == Join.Anonymous || model.GroupModel.GroupJoin == Join.Approval)
+                            {
+                                <EditForm Model="model.SignedInUserRole" OnValidSubmit="Join">
+                                    <button type="submit" class="btn btn-success">
+                                        <RadzenIcon Icon="group_add" Style="display: flex !important;" />
+                                    </button>
+                                </EditForm>
+
+                                async Task Join()
+                                {
+                                    var gj = await MainClient.GroupJoinAsync(model.GroupModel, authService.headers);
+                                    alert.InvokeAlert(gj.Message, MyAlert.Alerts.Success);
+                                }
+                            }
+                        }
+                        else if (model.GroupModel.OwnerId == model.SignedInUser.Id || model.SignedInUserRole.RoleType == RoleType.Owner)
+                        {
+                            <input class="btn btn-secondary" type="button" value="Owner" disabled />
+                        }
+                        else if (model.SignedInUserRole.RoleType == RoleType.Administrator)
+                        {
+                            <input class="btn btn-secondary" type="button" value="Administrator" disabled />
+                        }
+                        else if (model.SignedInUserRole.RoleType == RoleType.Moderator)
+                        {
+                            <input class="btn btn-secondary" type="button" value="Moderator" disabled />
+                        }
+                        else if (model.SignedInUserRole.RoleType == RoleType.Member)
+                        {
+                            <input class="btn btn-secondary" type="button" value="Member" disabled />
+                        }
+                    }
+                </li>
+            </ul>
+        </nav>
+
+        <MobileUI>
+            <Settings>
+                <div class="mx-auto" id="feed" style="position: sticky; overflow: auto; width: 100%; min-width: 400px; max-width: min-content;">
+                    <div class="card">
+                        <div class="d-flex flex-row">
+                            @if (dName)
+                            {
+                                if (!authService.isAuthenticated && string.IsNullOrWhiteSpace(model.SignedInUser.Id))
+                                {
+                                    <h2 style="background-color: #494055; color: black; line-height: inherit;" class="m-0 card-header w-100">@(model.GroupModel.Name)</h2>
+                                }
+                                else
+                                {
+                                    <h2 style="background-color: #494055; color: black; line-height: inherit; border-radius: 1rem 0 0 !important;" class="m-0 card-header w-100">@(model.GroupModel.Name)</h2>
+                                }
+                            }
+
+                            @if (authService.isAuthenticated && !dNameChange && model.SignedInUser.Id == model.GroupModel.OwnerId)
+                            {
+                                <div style="border-radius: 0 1rem 0 0;" class="d-flex card-header p-2">
+                                    <button @onclick="() => { dNameChange = true; dName = false; }" type="button" class="btn m-auto" style="width: max-content;">
+                                        <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        @if (dNameChange)
+                        {
+                            <EditForm Model="model.GroupModel" OnValidSubmit="UpdateName" class="mx-2 mt-2">
+                                <div class="d-flex flex-row ms-auto">
+                                    <InputText @bind-Value="model.GroupModel.Name" class="form-control" placeholder="Name"></InputText>
+                                    <button @onclick="() => { dNameChange = false; dName = true; }" type="submit" class="btn ms-auto">
+                                        <RadzenIcon Icon="save" Style="display: flex !important;" />
+                                    </button>
+                                    <button @onclick="() => { dNameChange = false; dName = true; }" type="button" class="btn">
+                                        <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+                            </EditForm>
+
+                            async Task UpdateName()
+                            {
+                                var u = await MainClient.UpdateAsync(model.GroupModel);
+                                dNameChange = false;
+                            }
+                        }
+
+                        @if (model.Pp != null)
+                        {
+                            <img class="w-100" style="max-width: 400px;" src="@variables.uri/p/g/@(GroupId)/@(ppImg.FileName)" />
+                        }
+                        else
+                        {
+                            <img class="align-self-center mx-2 my-auto" style="width: 256px !important;" src="/p/No_image_available.svg" />
+                        }
+
+                        @if (authService.isAuthenticated && model.GroupModel.OwnerId == model.SignedInUser.Id)
+                        {
+                            <button @onclick="() => dUpload = true" class="btn m-1" style="border-radius: 1rem !important;">Upload picture</button>
+                        }
+                    </div>
+
+                    <div class="card">
+                        <h4 class="card-header">Description</h4>
+                        @if (!dDescription)
+                        {
+                            <div class="p-3" style="white-space: pre-line">@model.GroupModel.Description</div>
+                        }
+                        @if (authService.isAuthenticated && model.SignedInUserRole.RoleType >= model.SectionRoles.Description)
+                        {
+                            if (dDescription)
+                            {
+                                <EditForm Model="model.GroupModel" OnValidSubmit="UpdateDescription">
+                                    <InputTextArea @bind-Value="model.GroupModel.Description" rows="5" class="form-control w-100"></InputTextArea>
+
+                                    <div class="text-right m-2">
+                                        <button class="btn" type="submit">
+                                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                                        </button>
+                                        <button @onclick="() => dDescription = false" class="btn" type="button">
+                                            <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                                        </button>
+                                    </div>
+                                </EditForm>
+
+                                async Task UpdateDescription()
+                                {
+                                    var u = MainClient.UpdateAsync(model.GroupModel);
+                                    dDescription = false;
+                                }
+                            }
+                            else
+                            {
+                                <button @onclick="() => dDescription = true" class="btn m-2 ms-auto" style="width: min-content;" type="button">
+                                    <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                                </button>
+                            }
+                        }
+                    </div>
+
+                    <div class="card">
+                        <h5 class="card-header">
+                            <MyTooltip Text="Links">
+                                <RadzenIcon Icon="link" Style="display: flex !important;" />
+                            </MyTooltip>
+                        </h5>
+
+                        @{
+                            int k = 0;
+                            foreach (var l in links)
+                            {
+                                int j = k;
+                                <div class="d-flex flex-row">
+                                    <a href="@(l.Key.Address)" @onclick="GoToLink" class="my-auto ms-2">@l.Key.Name</a>
+                                    @if (l.Value)
+                                    {
+                                        if (authService.isAuthenticated && model.GroupModel.OwnerId == model.SignedInUser.Id)
+                                        {
+                                            <button class="btn btn-danger ms-auto me-2 my-1 d-block" @onclick="RemoveLink">
+                                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task RemoveLink()
+                                            {
+                                                var rl = await MainClient.DeleteGroupLinkAsync(l.Key);
+                                                links.Remove(rl);
+                                            }
+                                        }
+                                        <button class="btn my-1 me-2 ms-1" @onclick="() => links[l.Key] = false">
+                                            <RadzenIcon Icon="visibility" Style="display: flex !important;" />
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn my-1 me-2 ms-auto" @onclick="() => links[l.Key] = true">
+                                            <RadzenIcon Icon="visibility_off" Style="display: flex !important;" />
+                                        </button>
+                                    }
+                                </div>
+
+                                void GoToLink()
+                                {
+                                    navigationManager.NavigateTo(l.Key.Address, true);
+                                }
+
+                                if (l.Value)
+                                {
+                                    <EditForm Model="l" OnValidSubmit="SaveLink" class="m-2">
+                                        <label>Name</label>
+                                        <InputText @bind-Value="l.Key.Name" class="form-control"></InputText>
+
+                                        <label>Address</label>
+                                        <InputText @bind-Value="l.Key.Address" class="form-control"></InputText>
+
+                                        <button type="submit" class="btn d-block me-2 ms-auto mt-1">
+                                            <RadzenIcon Icon="save" Style="display: flex !important;" />
+                                        </button>
+                                    </EditForm>
+
+                                    async Task SaveLink()
+                                    {
+                                        var ul = await MainClient.UpdateGroupLinkAsync(l.Key);
+                                        linkAlert.InvokeAlert($"Updated: {DateTime.Now}", MyAlert.Alerts.Success);
+                                    }
+                                }
+
+                                k++;
+                            }
+
+                            @if (authService.isAuthenticated && model.GroupModel.OwnerId == model.SignedInUser.Id)
+                            {
+                                <MyAlert @ref="linkAlert"></MyAlert>
+
+                                <span class="m-2">
+                                    <button @onclick="CreateLink" class="btn">
+                                        <RadzenIcon Icon="add_circle" Style="display: flex !important;" />
+                                    </button>
+                                </span>
+
+                                async Task CreateLink()
+                                {
+                                    links.Add(await MainClient.CreateGroupLinkAsync(model.GroupModel), true);
+                                }
+                            }
+                        }
+                    </div>
+
+                    <!--Members by level-->
+                    @if (model.SignedInUserRole.RoleType >= RoleType.Member)
+                    {
+                        <div class="card">
+                            <h4 class="card-header">
+                                Co-Owners<span class="float-right">@model.Owners.Count()</span>
+                            </h4>
+                            <div class="p-3">
+                                <input @oninput="(EventArgs) => SearchOwners(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Search Owners" />
+                                <hr />
+
+                                @{
+                                    void SearchOwners(string value)
+                                    {
+                                        lowners = model.Owners.Where(x => suMembers.Any(y => y.Name.ToLower().Contains(value.ToLower()) && y.Id == x.UserId)).AsQueryable();
+                                    }
+
+                                    <div class="d-flex flex-row">
+                                        @foreach (var u in lowners)
+                                        {
+                                            <div class="m-1">
+                                                <MainPP UserId="@u.UserId"></MainPP>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4 class="card-header">
+                                Adminstrators<span class="float-right">@model.Administrators.Count()</span>
+                            </h4>
+                            <div class="p-3">
+
+                                <input type="text" @oninput="(EventArgs) => SearchAdmins(EventArgs.Value.ToString())" class="form-control" placeholder="Search Adminstrators" />
+
+                                <hr />
+
+                                @{
+                                    void SearchAdmins(string value)
+                                    {
+                                        ladminstrators = model.Administrators.Where(x => suMembers.Any(y => y.Name.ToLower().Contains(value.ToLower()) && y.Id == x.UserId)).AsQueryable();
+                                    }
+
+                                    <div class="d-flex flex-row flex-wrap">
+                                        @foreach (var u in ladminstrators)
+                                        {
+                                            <div class="m-1">
+                                                <MainPP UserId="@u.UserId"></MainPP>
+                                            </div>
+                                        }
+
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4 class="card-header">
+                                Moderators<span class="float-right">@model.Moderators.Count()</span>
+                            </h4>
+                            <div class="p-3">
+                                <input @oninput="(EventArgs) => SearchMods(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Search Moderators" />
+                                <hr />
+
+                                @{
+                                    void SearchMods(string value)
+                                    {
+                                        lmoderators = model.Moderators.Where(x => suMembers.Any(y => y.Name.ToLower().Contains(value.ToLower()) && y.Id == x.UserId)).AsQueryable();
+                                    }
+
+                                    <div class="d-flex flex-row flex-wrap">
+                                        @foreach (var u in lmoderators)
+                                        {
+                                            <div class="m-1">
+                                                <MainPP UserId="@u.UserId"></MainPP>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h4 class="card-header">
+                                Members<span class="float-right">@model.Members.Count()</span>
+                            </h4>
+                            <div class="p-3">
+
+                                <input @oninput="(EventArgs) => SearchMembers(EventArgs.Value.ToString())" type="text" class="form-control" placeholder="Search Members" />
+
+                                <hr />
+
+                                @{
+                                    void SearchMembers(string value)
+                                    {
+                                        lmembers = model.Members.Where(x => suMembers.Any(y => y.Name.ToLower().Contains(value.ToLower()) && y.Id == x.UserId)).AsQueryable();
+                                    }
+
+                                    <div class="d-flex flex-row flex-wrap">
+                                        @foreach (var u in lmembers)
+                                        {
+                                            <div class="m-1">
+                                                <MainPP UserId="@u.UserId"></MainPP>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="card">
+                        <h5 class="card-header ms-0 my-auto">Tags</h5>
+                        @if (model.SignedInUserRole.RoleType >= model.SectionRoles.Hashtags)
+                        {
+                            <EditForm Model="hashtag" OnValidSubmit="AddTag" class="d-flex m-3">
+                                <InputText @bind-Value="hashtag.Name" class="form-control my-auto" pattern="[^' ']+" placeholder="Add a tag"></InputText>
+                                <button type="submit" class="btn">
+                                    <RadzenIcon Icon="add" Style="display: flex !important;" />
+                                </button>
+                            </EditForm>
+
+                            async Task AddTag()
+                            {
+                                if (hashtag.Name != "" && hashtag.Name != null)
+                                {
+                                    hashtag.Name = hashtag.Name;
+                                    if (model.Hashtags.Where(x => x.Name == hashtag.Name).FirstOrDefault() == null)
+                                    {
+                                        var ch = await MainClient.CreateHashtagAsync(hashtag);
+                                        model.Hashtags.Add(ch);
+                                        hashtag = new Hashtag { GroupId = GroupId };
+                                    }
+                                }
+                            }
+
+                            <hr class="mt-0" />
+                            <div class="d-flex flex-row flex-wrap p-2">
+                                @foreach (var h in model.Hashtags)
+                                {
+                                    <EditForm Model="h" OnValidSubmit="RemoveHashtag" class="m-2">
+                                        <input type="submit" class="btn btn-danger" value="@(h.Name)" />
+                                    </EditForm>
+
+                                    async Task RemoveHashtag()
+                                    {
+                                        var dh = await MainClient.DeleteHashtagAsync(h);
+                                        model.Hashtags.Remove(dh);
+                                    }
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-row flex-wrap py-1">
+                                @foreach (var h in model.Hashtags)
+                                {
+                                    <input class="btn btn-secondary mx-2 my-1" type="button" value="@(h.Name)" disabled />
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </Settings>
+            <Feed>
+                <!--LUMINE8-->
+            <div class="mx-auto" style="width: 640px;">
+                    @if (authService.isAuthenticated && model.SignedInUserRole.RoleType >= model.SectionRoles.PostLumine && model.SectionRoles.PostLumine > RoleType.NoRole)
+                    {
+                        <div class="d-flex flex-column position-relative mt-3">
+                            @if (lumineButtons)
+                            {
+                                <button @onclick="Close" class="btn btn-danger ms-auto me-0" style="z-index: 101;">
+                                    <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                                </button>
+                            }
+                            <EditForm Model="lumine" OnValidSubmit="PostLumine" class="my-2 p-2 myform" style="z-index: 1;">
+                                <RadzenHtmlEditor @bind-Value="lumine.MessageString" PlaceHolder="What's on your mind" Style="background-color: white;" @onfocusin="() => lumineButtons = true">
+                                    <RadzenHtmlEditorUndo />
+                                    <RadzenHtmlEditorRedo />
+                                    <RadzenHtmlEditorSeparator />
+                                    <RadzenHtmlEditorBold />
+                                    <RadzenHtmlEditorItalic />
+                                    <RadzenHtmlEditorUnderline />
+                                    <RadzenHtmlEditorStrikeThrough />
+                                    <RadzenHtmlEditorSeparator />
+                                    <RadzenHtmlEditorColor />
+                                    <RadzenHtmlEditorBackground />
+                                    <RadzenHtmlEditorRemoveFormat />
+                                    <RadzenHtmlEditorSeparator />
+                                    <RadzenHtmlEditorLink />
+                                    <RadzenHtmlEditorUnlink />
+                                </RadzenHtmlEditor>
+
+                                @if (lumineButtons)
+                                {
+                                    <div class="d-flex flex-row mt-2">
+                                        <MyDropdown ButtonClass="btn btn-info-fill ms-1" ContentStyle="display: flex; flex-direction: column; background-color: white; border: 1px solid lightgrey;">
+                                            <ButtonFragment>
+                                                <RadzenIcon Icon="tag" Style="display: flex !important;" />
+                                            </ButtonFragment>
+                                            <DropdownContent>
+                                                <div>
+                                                    <input @bind-value="mHashtag" type="text" placeholder="Add tag" />
+                                                    <button type="button" @onclick="AddTag" class="btn btn-success">
+                                                        <RadzenIcon Icon="add" Style="display: flex !important;" />
+                                                    </button>
+                                                </div>
+                                                <div class="mt-2" style="max-width: fit-content;">
+                                                    @foreach (var h in mHashtags)
+                                                    {
+                                                        <button class="btn btn-info-fill" disabled>@h.Name</button>
+                                                    }
+                                                </div>
+                                            </DropdownContent>
+                                        </MyDropdown>
+
+                                        <div class="ms-auto">
+                                            @if (room.AllowComments)
+                                            {
+                                                <MyTooltip Text="Comments are allowed">
+                                                    <button class="btn btn-success-fill me-1" @onclick="() => room.AllowComments = !room.AllowComments" type="button">
+                                                        <RadzenIcon Icon="chat" Style="display: flex !important;" />
+                                                    </button>
+                                                </MyTooltip>
+                                            }
+                                            else
+                                            {
+                                                <MyTooltip Text="Comments not allowed">
+                                                    <button class="btn btn-danger-fill me-1" @onclick="() => room.AllowComments = !room.AllowComments" type="button">
+                                                        <RadzenIcon Icon="speaker_notes_off" Style="display: flex !important;" />
+                                                    </button>
+                                                </MyTooltip>
+                                            }
+
+                                            <input type="submit" value="LUMINE8" class="btn btn-primary-fill me-0" />
+                                        </div>
+                                    </div>
+
+                                    void AddTag()
+                                    {
+                                        if (!string.IsNullOrEmpty(mHashtag))
+                                        {
+                                            if (mHashtags.Where(x => x.Name.ToLower().Contains(mHashtag)).FirstOrDefault() == null)
+                                                mHashtags.Add(new MessageHashtag { Name = mHashtag });
+                                        }
+
+                                        mHashtag = "";
+                                    }
+                                }
+                            </EditForm>
+                        </div>
+
+                        async Task Close()
+                        {
+                            lumine = new Message { SenderId = model.SignedInUser.Id };
+                            lumineButtons = false;
+
+                            mHashtags = new List<MessageHashtag>();
+                        }
+
+                        async Task PostLumine()
+                        {
+                            var pm = new PostModel { GroupId = model.GroupModel.GroupId, Message = lumine, Room = room };
+                            pm.MHashtags.AddRange(mHashtags);
+
+                            var pl = await MainClient.PostLumineAsync(pm);
+                            rooms.Add(pl);
+                            rooms = rooms.OrderByDescending(x => x.Date).ToList();
+
+                            lumineButtons = false;
+
+                            mHashtags = new List<MessageHashtag>();
+                            room = new Room { OwnerId = model.SignedInUser.Id, AllowComments = true };
+                            lumine = new Message { SenderId = model.SignedInUser.Id };
+                        }
+                    }
+                    @if (model.SignedInUserRole.RoleType >= model.SectionRoles.SeeLumine)
+                    {
+                        foreach (var r in rooms)
+                        {
+                            <Post room="r" OnClick="Refresh"></Post>
+                            void Refresh()
+                            {
+                                rooms.Remove(r);
+                                StateHasChanged();
+                            }
+                        }
+                    }
+                </div>
+            </Feed>
+        </MobileUI>
+    </div>
+
+    @if (dUpload)
+    {
+        <div class="position-fixed" style="top: 0; left: 0; width: 100%; height: 100%; overflow: auto; z-index: 101;">
+            <div class="d-flex flex-column p-2" style="margin: auto; box-shadow: 0px 0px 1px 5000px rgba(0,0,0,0.8); background-color: white; width: max-content;">
+                <button type="button" @onclick="() => { dUpload = false; }" class="btn ms-auto">
+                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                </button>
+
+                <InputFile OnChange="GetFile" required></InputFile>
+
+                @if (!string.IsNullOrEmpty(ppUploadString))
+                {
+                    <EditForm Model="ppFile" OnValidSubmit="Upload" class="d-flex flex-column">
+                        <img class="m-auto" style="width: 256px; border-radius: 1rem;" src="@(ppUploadString)" />
+                        <button type="submit" class="btn btn-success mt-2 mx-auto" style="width: max-content;">
+                            <RadzenIcon Icon="file_upload" Style="display: flex !important;" />
+                        </button>
+                    </EditForm>
+                }
+            </div>
+
+            <div class="d-flex" style="flex-wrap: wrap;" id="pp">
+                @foreach (var p in model.Pps)
+                {
+                    <div class="d-flex flex-column m-2 p-1" style="width: min-content; border: 1px solid #464342;">
+                        <EditForm Model="p" OnValidSubmit="RemovePP" class="me-auto">
+                            <button class="btn btn-danger-fill" type="submit" style="background-color: #a72828; opacity: 1;">
+                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                            </button>
+                        </EditForm>
+
+                        <img style="width: 256px; border-radius: 1rem;" src="@variables.uri/p/g/@(GroupId)/@(p.FileName)" />
+
+                        <EditForm Model="p" OnValidSubmit="Switch" class="ms-auto">
+                            <input class="btn btn-info-fill ms-auto" type="submit" value="Switch" style="background-color: #17a2b8; opacity: 1;" />
+                        </EditForm>
+                    </div>
+
+                    async Task Switch()
+                    {
+                        model.Pp = await MainClient.SwitchGroupProfilePictureAsync(p);
+                        ppImg = p;
+                    }
+
+                    async Task RemovePP()
+                    {
+                        if (!string.IsNullOrWhiteSpace(model.Pp.ImageId))
+                        {
+                            if (p.ImageId == model.Pp.ImageId)
+                            {
+                                model.Pp = null;
+                                ppImg = null;
+                            }
+                        }
+                        model.Pps.Remove(await MainClient.DeleteGroupProfilePictureAsync(p));
+                    }
+                }
+            </div>
+        </div>
+
+        async Task Upload()
+        {
+            if (ppFile.FirstOrDefault() != null && System.Text.RegularExpressions.Regex.Match(ppFile.FirstOrDefault().ContentType, @"image/*").Success)
+            {
+                uploading = true;
+                StateHasChanged();
+
+                Stream stream = ppFile.FirstOrDefault().OpenReadStream(1024 * 1024);
+                MemoryStream ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+
+                var content = new MultipartFormDataContent();
+                content.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", ppFile.FirstOrDefault().Name);
+
+                var upp = await Http.PostAsync($"api/g/UploadPP/{GroupId}", content);
+                if (upp.IsSuccessStatusCode)
+                {
+                    ppFile.Clear();
+                    ppUploadString = null;
+
+                    model.Pps.Add(await upp.Content.ReadFromJsonAsync<GroupImage>());
+                    uploading = false;
+                }
+            }
+        }
+    }
+}
+
+@code {
+    [Parameter] public string GroupId { get; set; }
+
+    private bool isAuthenticated = false, legit = false;
+
+    private MyAlert alert;
+
+    private bool render = false;
+
+    private IQueryable<SharedUser> suMembers;
+
+    private Dictionary<GroupLink, bool> links = new();
+    private MyAlert linkAlert;
+
+    private IQueryable<Role> lroles, lowners, ladminstrators, lmoderators, lmembers;
+    private string qOwners;
+
+    private bool dNameChange = false, dName = true, dDescription = false, dUpload = false;
+
+    private Hashtag hashtag;
+    private List<Room> rooms = new();
+
+    private Room room;
+    private static Message lumine;
+
+    private string mHashtag = "";
+    private List<MessageHashtag> mHashtags = new();
+
+    private string sOwners = "", sAdmins = "", sMods = "", sMembers = "";
+    private IQueryable<SharedUser> uOwners, uAdmins, uMods, uMembers;
+
+    private bool lumineButtons = false;
+
+    private string ppUploadString;
+    private bool uploading = false;
+    private GroupImage ppImg = new();
+
+    private List<IBrowserFile> ppFile = new List<IBrowserFile>();
+
+    private GroupPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("UserName"))
+                Http.DefaultRequestHeaders.Add("UserName", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("Password"))
+                Http.DefaultRequestHeaders.Add("Password", authService.loginUser.Password);
+        }
+
+        model = await MainClient.GetGroupPageModelAsync(new GroupId { GroupId_ = GroupId }, authService.headers);
+        if (!model.Valid)
+            navigationManager.NavigateTo("404");
+
+        rooms = model.Rooms.OrderByDescending(x => x.Date).ToList();
+
+        ladminstrators = model.Administrators.AsQueryable();
+        lowners = model.Owners.AsQueryable();
+        lmembers = model.Members.AsQueryable();
+        lmoderators = model.Moderators.AsQueryable();
+
+        if (model.Pp != null)
+            ppImg = model.Pps.Where(x => x.ImageId == model.Pp.ImageId).FirstOrDefault();
+
+        foreach (var l in model.Links)
+            this.links.Add(l, false);
+
+        hashtag = new Hashtag { GroupId = model.GroupModel.GroupId };
+        lumine = new Message { SenderId = model.SignedInUser.Id };
+        room = new Room { OwnerId = model.SignedInUser.Id, AllowComments = true };
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("windowLoad");
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 - Group: {model.GroupModel.Name}");
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        //await UpdateVariables();
+    }
+
+    private async Task GetFile(InputFileChangeEventArgs e)
+    {
+        ppFile.Add(e.File);
+
+        var format = "image/jpeg";
+
+        var resizedImageFile = await ppFile.FirstOrDefault().RequestImageFileAsync(format, 1024, 1024);
+        var buffer = new byte[resizedImageFile.Size];
+        await resizedImageFile.OpenReadStream().ReadAsync(buffer);
+        var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+        ppUploadString = imageDataUrl;
+        StateHasChanged();
+    }
+}

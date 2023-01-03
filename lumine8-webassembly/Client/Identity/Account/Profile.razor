@@ -1,0 +1,40 @@
+﻿@page "/Account/Profile"
+@layout AccountLayout
+
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+@inject NavigationManager navigationManager
+
+<PageTitle>Profile</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(msg))
+{
+    <p class="text-danger">@msg</p>
+}
+
+<button type="button" class="btn btn-danger" @onclick="DeleteAccount">Delete Account</button>
+
+@code {
+    private SharedUser User;
+    private string msg = string.Empty;
+    private Tokens tokens = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        User = await MainClient.GetUserAsync(authService.loginUser, authService.headers);
+    }
+
+    private async Task DeleteAccount()
+    {
+        try
+        {
+            var da = await MainClient.DeleteAccountAsync(authService.loginUser);
+            navigationManager.NavigateTo("/Register", true);
+        }
+        catch(System.Exception ex)
+        {
+            msg = "Feature not available at the moment. Needs testing.";
+        }
+    }
+}

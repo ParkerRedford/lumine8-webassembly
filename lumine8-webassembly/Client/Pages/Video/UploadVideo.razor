@@ -1,0 +1,143 @@
+﻿@page "/v-upload"
+
+@inject HttpClient Http
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    video {
+        width: 50%;
+    }
+</style>
+
+@if (render)
+{
+    if (authService.isAuthenticated)
+    {
+        <InputFile OnChange="GetFile" accept="video/*" class="btn btn-success" />
+        @if (dUpload)
+        {
+            <input type="button" @onclick="Upload" class="btn btn-success" value="Upload" />
+        }
+
+        if (isLoading)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <video @ref="element" controls>
+                Your browser does not support the video tag.
+            </video>
+        }
+    }
+    else
+    {
+        <p>Please sign in to upload videos.</p>
+    }
+}
+
+@code {
+    private bool render = false;
+    private bool isLoading = false;
+
+    private List<IBrowserFile> file = new List<IBrowserFile>();
+    private string uploadString = string.Empty;
+    private long pos = 0;
+
+    private Video video = new();
+
+    private ElementReference element;
+
+    private HubConnection mainHub;
+
+    private MultipartFormDataContent content = new MultipartFormDataContent();
+    private bool dUpload = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        mainHub = new HubConnectionBuilder()
+            .WithAutomaticReconnect()
+            .WithUrl(navigationManager.ToAbsoluteUri($"{variables.uri}/mainhub"))
+            .Build();
+
+        mainHub.On<long>("VideoProgress", (pos) =>
+            {
+                this.pos = pos;
+                StateHasChanged();
+            });
+
+        await mainHub.StartAsync();
+
+        render = true;
+    }
+
+    private async Task Upload()
+    {
+        //var t1 = Task.Run(async () =>
+        //{
+        //    var vh = await Http.PostAsync("api/v/Video", content);
+        //    if(vh.IsSuccessStatusCode)
+        //    {
+        //        var g = await vh.Content.ReadAsStringAsync();
+
+        //        video.FileName = g;
+        //        await Http.PostAsJsonAsync("api/v/VideoInfo", video);
+        //    }
+        //});
+        //var t2 = Task.Run(async () =>
+        // {
+        //     while (true)
+        //     {
+        //         await Task.Delay(500);
+        //         await mainHub.SendAsync("VideoProgress");
+        //     }
+        // });
+
+        //Task.WaitAll(t1, t2);
+
+        //await Http.PostAsync("api/v/Video", content);
+    }
+
+    private async Task GetFile(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            isLoading = true;
+            dUpload = false;
+
+            string contentType = "";
+            string sourceB64 = "";
+
+            var file = e.GetMultipleFiles(1).FirstOrDefault();
+            contentType = file.ContentType;
+
+            var fileSize = file.Size;
+            var buffer = new byte[fileSize];
+            await file.OpenReadStream(long.MaxValue).ReadAsync(buffer);
+
+            sourceB64 = Convert.ToBase64String(buffer);
+
+            content = new MultipartFormDataContent
+            {
+                {
+                    new ByteArrayContent(buffer),
+                    "\"file\"",
+                    file.Name
+                }
+            };
+
+            isLoading = false;
+            dUpload = true;
+
+            await JSRuntime.InvokeVoidAsync("loadVideo3", sourceB64, contentType, element);
+        }
+        catch (System.Exception ex)
+        {
+
+        }
+    }
+}

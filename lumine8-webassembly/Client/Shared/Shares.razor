@@ -1,0 +1,117 @@
+﻿@inject MainProto.MainProtoClient MainClient
+@inject NavigationManager navigationManager
+
+<MyDropdown ButtonClass="btn btn-primary-fill" ContentClass="myform">
+    <ButtonFragment>
+        <RadzenIcon Icon="share" Style="display: flex !important;" />
+    </ButtonFragment>
+    <DropdownContent>
+        <input @oninput="(EventArgs) => SearchPeople(EventArgs.Value.ToString())" @onfocusin="() => shareTake = 50" type="text" class="form-control w-auto mr-1" placeholder="Search friends" />
+
+        <MyAlert @ref="msg"></MyAlert>
+
+        @if (!string.IsNullOrWhiteSpace(Search))
+        {
+            foreach (var f in lFriends)
+            {
+                if (room.OwnerId != f.Id)
+                {
+                    var share = shares.Where(x => x.UserId == f.Id).FirstOrDefault();
+                    <div class="d-flex flex-row my-2">
+                        <a href="/u/@(f.Username)" class="ms-3 mr-auto my-auto">@(f.Name)</a>
+                        @if (share == null)
+                        {
+                            <button type="submit" @onclick="Share" class="btn btn-info">
+                                <RadzenIcon Icon="share" Style="display: flex !important;" />
+                            </button>
+
+                            async Task Share()
+                            {
+                                var res = await MainClient.ShareAsync(new ShareRequest { Friend = f, Room = room });
+                                shares.Add(res.Share);
+                                msg.InvokeAlert($"Shared post to {res.Name}", MyAlert.Alerts.Success);
+                            }
+                        }
+                        else
+                        {
+                            <button type="submit" @onclick="UnShare" class="btn btn-danger">
+                                <RadzenIcon Icon="share" Style="display: flex !important;" />
+                            </button>
+
+                            async Task UnShare()
+                            {
+                                var res = await MainClient.UnShareAsync(new ShareRequest { Friend = f, Room = room });
+                                shares.Remove(res.Share);
+                                msg.InvokeAlert($"Removed shared post from {res.Name}", MyAlert.Alerts.Warning);
+                            }
+                        }
+                    </div>
+                }
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(Search) && friends.Count() > 0)
+        {
+            foreach (var f in friends.Take(shareTake))
+            {
+                if (room.OwnerId != f.Id)
+                {
+                    var share = shares.Where(x => x.UserId == f.Id).FirstOrDefault();
+                    <div class="d-flex flex-row my-2">
+                        <a href="/u/@(f.Username)" class="ms-3 mr-auto my-auto">@(f.Name)</a>
+                        @if (share == null)
+                        {
+                            <button type="submit" @onclick="Share" class="btn btn-success">
+                                <RadzenIcon Icon="share" Style="display: flex !important;" />
+                            </button>
+
+                            async Task Share()
+                            {
+                                var res = await MainClient.ShareAsync(new ShareRequest { Friend = f, Room = room });
+                                shares.Add(res.Share);
+                                msg.InvokeAlert($"Shared post to {res.Name}", MyAlert.Alerts.Success);
+                            }
+                        }
+                        else
+                        {
+                            <button type="submit" @onclick="UnShare" class="btn btn-danger">
+                                <RadzenIcon Icon="share" Style="display: flex !important;" />
+                            </button>
+
+                            async Task UnShare()
+                            {
+                                var res = await MainClient.UnShareAsync(new ShareRequest { Friend = f, Room = room });
+                                shares.Remove(res.Share);
+                                msg.InvokeAlert($"Removed shared post from {res.Name}", MyAlert.Alerts.Warning);
+                            }
+                        }
+                    </div>
+                }
+            }
+        }
+    </DropdownContent>
+</MyDropdown>
+
+@code {
+    [Parameter] public SharedUser signedInUser { get; set; }
+    [Parameter] public Room room { get; set; }
+    [Parameter] public IQueryable<SharedUser> friends { get; set; }
+    [Parameter] public List<Share> shares { get; set; }
+
+    private IQueryable<SharedUser> lFriends;
+
+    private string Search = "";
+
+    private int shareTake = 9;
+    private MyAlert msg;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lFriends = friends;
+    }
+
+    void SearchPeople(string value)
+    {
+        lFriends = friends.Where(x => x.Name.ToLower().Contains(value.ToLower()) && x.Id != signedInUser.Id);
+        Search = value;
+    }
+}

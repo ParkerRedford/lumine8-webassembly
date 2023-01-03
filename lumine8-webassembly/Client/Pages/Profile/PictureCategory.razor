@@ -1,0 +1,141 @@
+﻿@page "/u/p/{Username}/c/{Category}"
+
+@inject MainProto.MainProtoClient MainClient
+
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+<style>
+    .img:hover {
+        cursor: pointer;
+    }
+
+    button {
+        width: min-content !important;
+    }
+</style>
+
+<MyAlert @ref="alert"></MyAlert>
+
+@if (render)
+{
+    <h3 class="text-center mb-5">User: @user.Name | Picture Category: @Category</h3>
+
+    <div class="d-flex flex-row flex-wrap" style="justify-content: space-evenly;">
+        @foreach (var img in images)
+        {
+            <figure class="d-flex flex-column">
+                @if (img.Value)
+                {
+                    <div class="d-flex flex-row">
+                        <button type="button" @onclick="() => images[img.Key] = false" class="btn btn-danger">
+                            <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                        </button>
+
+                        <button type="button" @onclick="RemovePicture" class="btn btn-danger ms-auto">
+                            <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                        </button>
+                    </div>
+                    async Task RemovePicture()
+                    {
+                        if (img.Key.Category == "Profile Pictures")
+                        {
+                            alert.InvokeAlert("Go to Upload Pictures to delete pictures from \"Profile Pictures\"", MyAlert.Alerts.Warning);
+                            return;
+                        }
+
+                        images.Remove(await MainClient.DeleteCategoryAsync(img.Key));
+                    }
+                }
+                else if (user.Id == signedInUser.Id)
+                {
+                    <button @onclick="() => images[img.Key] = true" class="btn btn-info">
+                        <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                    </button>
+                }
+                <img @onclick="SwitchModal" style="width: 14rem;" class="img" src="@variables.uri/p/u/@(user.Id)/@(img.Key.FileName)" />
+                <figcaption class="d-flex flex-column">
+
+                    @if (!img.Value && user.Id == signedInUser.Id)
+                    {
+                        if (!string.IsNullOrWhiteSpace(img.Key.Description))
+                        {
+                            <p>Description: @img.Key.Description</p>
+                        }
+                    }
+                    else
+                    {
+                        <EditForm Model="img" OnValidSubmit="EditImage" class="d-flex flex-column">
+                            @if (Category != "Profile Pictures")
+                            {
+                                <InputText @bind-Value="img.Key.Category" placeholder="Category" class="form-control"></InputText>
+                            }
+                            <InputTextArea @bind-Value="img.Key.Description" placeholder="Description" class="form-control"></InputTextArea>
+
+                            <button type="submit" class="btn btn-success">
+                                <RadzenIcon Icon="save" Style="display: flex !important;" />
+                            </button>
+                        </EditForm>
+
+                        async void EditImage()
+                        {
+                            if (img.Key.Category == "Profile Pictures")
+                            {
+                                alert.InvokeAlert("Go to Upload Pictures to delete pictures from \"Profile Pictures\"", MyAlert.Alerts.Warning);
+                                return;
+                            }
+
+                            var ei = await MainClient.EditImageAsync(img.Key);
+                            images[ei] = false;
+                        }
+                    }
+                </figcaption>
+            </figure>
+
+            void SwitchModal()
+            {
+                modal = img.Key;
+            }
+        }
+    </div>
+
+    @if (modal != null)
+    {
+        <PictureModal image="modal" OnClick="() => modal = null"></PictureModal>
+    }
+}
+
+@code {
+    [Parameter] public string Username { get; set; }
+    [Parameter] public string Category { get; set; }
+
+    private bool render = false;
+
+    private SharedUser user, signedInUser;
+
+    private IDictionary<Image, bool> images = new Dictionary<Image, bool>();
+
+    private Image modal;
+    private MyAlert alert;
+
+    private CategoryPageModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await MainClient.GetCategoryModelAsync(new CategoryPageModelRequest { Username = Username, Category = Category }, authService.headers);
+        foreach (var img in model.Images)
+            images.Add(img, false);
+
+        render = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+            await JSRuntime.InvokeVoidAsync("ChangeTitle", $"lumine8 -> Name: {user.Name}  - Category: {Category}");
+    }
+}

@@ -1,0 +1,48 @@
+﻿@inject AuthenticationService authService
+
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <NavLink class="nav-link" href="/Account/Manager">
+            <span class="oi oi-reload"></span> Account Manager
+        </NavLink>
+    </li>
+
+    <li class="nav-item">
+        <NavLink class="nav-link" href="/Account/SetupAccount">
+            <span class="oi oi-account-login"></span> Setup Account
+        </NavLink>
+    </li>
+
+    @if (authService.isAuthenticated)
+    {
+        <li class="nav-item">
+            <NavLink class="nav-link" href="/Account/Profile">
+                <span class="oi oi-home"></span> Profile
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="/Account/ChangePassword">
+                <span class="oi oi-reload"></span> Change Password
+            </NavLink>
+        </li>
+
+        <li class="nav-item">
+            <NavLink class="nav-link" href="/Account/Info">
+                <span class="oi oi-home"></span> Account Info
+            </NavLink>
+        </li>
+
+        <li class="nav-item">
+            <NavLink class="nav-link" href="/Account/Payment">
+                <span class="oi oi-credit-card"></span> Payment
+            </NavLink>
+        </li>
+    }
+</ul>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await authService.InitializeAuthenticate();
+    }
+}

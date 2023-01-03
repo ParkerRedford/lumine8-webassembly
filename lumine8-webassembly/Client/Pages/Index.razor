@@ -1,0 +1,759 @@
+﻿@page "/home"
+
+@inject MainProto.MainProtoClient MainClient
+
+@inject AuthenticationService authService
+@inject NavigationManager navigationManager
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject HttpClient Http
+@inject SingletonVariables variables
+
+@inject EnumToString enumConverter
+
+<style>
+    figure {
+        width: 100%;
+    }
+
+    .pRadio {
+        margin: auto 0.5rem;
+    }
+
+    .rz-dialog-wrapper {
+        left: 0 !important;
+    }
+
+    #main {
+        display: flex;
+        flex-direction: row;
+    }
+
+    figure {
+        height: max-content;
+    }
+</style>
+
+@if (variables.isDesktop)
+{
+    <style>
+        #cog {
+            display: none;
+        }
+
+        #settings {
+            display: block;
+            width: 360px;
+        }
+
+        #feed {
+            width: auto;
+        }
+    </style>
+}
+
+@if (!variables.isDesktop)
+{
+    <style>
+        #rooms {
+            width: 100% !important;
+        }
+
+        #cog {
+            display: block;
+        }
+
+        #settings {
+            display: none !important;
+        }
+
+        #feed {
+            width: 100%;
+        }
+
+        #profile {
+            flex-direction: column;
+        }
+
+        #main {
+            flex-direction: column;
+        }
+
+        #roomsDiv {
+            width: 100%;
+        }
+
+        #feed {
+            position: inherit !important;
+        }
+
+        #settings {
+            width: 100% !important;
+            padding: 0 !important;
+        }
+
+        .rz-state-active {
+            margin: 0 !important;
+            padding: 0;
+            height: max-content;
+        }
+    </style>
+}
+
+<RadzenDialog />
+
+@if (render)
+{
+    <MobileUI>
+        <Feed>
+            <div class="mx-auto" id="roomsDiv">
+                <div class="mx-auto" style="width: 640px;" id="rooms">
+                    @if (rooms.Rooms_.Count() == 0)
+                    {
+                        <h3 class="text-center">Timeline</h3>
+                    }
+                    else
+                    {
+                        foreach (var r in rooms.Rooms_)
+                        {
+                            <Post room="r" OnClick="Refresh"></Post>
+                            async Task Refresh()
+                            {
+                                rooms.Rooms_.Remove(r);
+                                StateHasChanged();
+                            }
+                        }
+                    }
+                </div>
+            </div>
+        </Feed>
+        <Settings>
+            <div id="feed">
+                <div>
+                    @*<div>
+                        <label>Visibility</label>
+                        <select @bind="postVisibility" class="form-select" id="relationship" style="width: max-content;">
+                        @foreach (var v in Enum.GetValues(typeof(lumine8.Shared.Models.Messages.PostVisibility)))
+                        {
+                        <option value="@v">@room.PostVisibilityString((lumine8.Shared.Models.Messages.PostVisibility)v)</option>
+                        }
+                        </select>
+                        </div>*@
+                    <h3>Hours</h3>
+                    <div class="d-flex flex-row">
+                        <input type="number" @bind-value="index.User.HoursFeed" class="form-control h-auto" />
+                        <button type="button" @onclick="UpdateHours" class="btn btn-success-fill">
+                            <RadzenIcon Icon="update" Style="display: flex !important;" />
+                        </button>
+                    </div>
+
+                    <MyAlert @ref="hrsMsg"></MyAlert>
+
+                    <details>
+                        <summary>What is this?</summary>
+                        Get posts that are between 0 and 168 hours. Default value is 72 hours.
+                    </details>
+
+                    <hr />
+
+                    <div class="d-flex flex-row">
+                        <h3 class="my-auto">Tags</h3>
+                        <button type="button" class="btn btn-info-fill ms-2 my-auto" style="height: min-content;" @onclick="ShowTagSettings">
+                            <RadzenIcon Icon="tune" Style="display: flex !important;" />
+                        </button>
+                        <div class="ms-auto mt-auto">
+
+                            <select @bind="tagOptions" @oninput="ChangeFilter" class="form-select">
+                                @foreach (var f in System.Enum.GetValues(typeof(TagOptions)))
+                                {
+                                    <option value="@f">@enumConverter.ToTagOptions((TagOptions)f)</option>
+                                }
+                            </select>
+
+                            @{
+                                async Task ChangeFilter(ChangeEventArgs e)
+                                {
+                                    switch (e.Value.ToString())
+                                    {
+                                        case "NoFilter":
+                                            tagOptions = TagOptions.NoFilter;
+                                            break;
+                                        case "FilterChecked":
+                                            tagOptions = TagOptions.FilterChecked;
+                                            break;
+                                        case "FilterBoth":
+                                            tagOptions = TagOptions.FilterBoth;
+                                            break;
+                                        default:
+                                            tagOptions = TagOptions.NoFilter;
+                                            break;
+                                    }
+
+                                    await getRooms();
+                                }
+                            }
+
+                        </div>
+                    </div>
+
+                    <details>
+                        <summary>What is this?</summary>
+                        Don't display posts that contain certain words or phrases by adding it to the list in the "Tags" tab. Make sure it is checked to make it default
+                    </details>
+
+                    <hr />
+
+                    <div class="ms-auto mt-4" style="margin-bottom: 0.5rem;">
+                        <label for="@youid" class="m-auto">Include your posts</label>
+                        <input type="checkbox" @onchange="Yourself" checked="@indexRooms.You" id="@youid" />
+                    </div>
+                    <div class="ms-auto mt-auto" style="margin-bottom: 0.5rem;">
+                        <label for="@checkid" class="m-auto">Include shared posts</label>
+                        <input type="checkbox" @onchange="async () => { indexRooms.BShares = !indexRooms.BShares; await getRooms(); }" checked="@indexRooms.BShares" id="@checkid" />
+                    </div>
+
+                    <details>
+                        <summary>More info</summary>
+                        If checked, all shared posts will display regardless of your options
+                    </details>
+
+                    <hr />
+
+                    <div class="d-flex flex-row">
+                        <h3 class="my-auto">Friends</h3>
+                        <button type="button" class="btn btn-info-fill ms-2" @onclick="ShowFriendsSettings">
+                            <RadzenIcon Icon="tune" Style="display: flex !important;" />
+                        </button>
+                        <div class="ms-auto mt-auto" style="margin-bottom: 0.5rem;">
+                            <label for="@fFriends" class="m-auto">Filter</label>
+                            <input type="checkbox" @onchange="async () => { indexRooms.FFriends = !indexRooms.FFriends; await getRooms(); }" checked="@indexRooms.FFriends" id="@fFriends" />
+                        </div>
+                    </div>
+
+                    <details>
+                        <summary>What is this?</summary>
+                        Filter your friends by list, or don't filter your friends. Blacklist friends will not display in your feed regardless your options
+                    </details>
+
+                    <hr />
+
+                    <div class="d-flex flex-row">
+                        <h3 class="my-auto">Groups</h3>
+                        <button type="button" class="btn btn-info-fill ms-2" @onclick="ShowGroupsSettings">
+                            <RadzenIcon Icon="tune" Style="display: flex !important;" />
+                        </button>
+                        <div class="ms-auto mt-auto" style="margin-bottom: 0.5rem;">
+                            <label for="@fGroups" class="m-auto">Filter</label>
+                            <input type="checkbox" @onchange="async () => { indexRooms.FGroups = !indexRooms.FGroups; await getRooms(); }" checked="@indexRooms.FGroups" id="@fGroups" />
+                        </div>
+                    </div>
+
+                    <details>
+                        <summary>What is this?</summary>
+                        Filter your groups by list, or don't filter your groups. Blacklist groups will not display in your feed regardless your options
+                    </details>
+                </div>
+            </div>
+        </Settings>
+    </MobileUI>
+}
+@code {
+    private IndexPageModel index = new();
+    private IndexRooms indexRooms = new();
+    private IQueryable<Message> Messages;
+
+    private string youid = Guid.NewGuid().ToString(),
+    checkid = Guid.NewGuid().ToString(),
+    fFriends = Guid.NewGuid().ToString(),
+    fGroups = Guid.NewGuid().ToString();
+
+    private bool show = true, render = false;
+
+    private bool bSettings = false;
+    private string sDisplay = "block";
+
+    private Rooms rooms = new();
+
+    private List<FriendDuo> lFriends = new();
+    private List<SharedUser> lsuFriends = new();
+    private string friendStr = "";
+    private int friendsTake = 50;
+
+    private IQueryable<GroupModel> lgroups;
+    private string groupsStr = "";
+    private int groupsTake = 0;
+
+    private int hours = 0;
+    private MyAlert hrsMsg;
+
+    private TagOptions tagOptions = TagOptions.NoFilter;
+
+    private string TagStr = "";
+
+    private DateTime time = DateTime.Now;
+
+    private IList<string> clientMsgs = new List<string>();
+
+    private LoginUser loginUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await authService.InitializeAuthenticate();
+
+        if (!authService.isAuthenticated)
+            navigationManager.NavigateTo("/Register", true);
+        else
+        {
+            index = await MainClient.GetIndexModelAsync(new Empty(), authService.headers);
+
+            this.lFriends = index.Friends.ToList();
+            this.lsuFriends = index.SuFriends.ToList();
+            this.lgroups = index.Groups.AsQueryable();
+
+            indexRooms = new IndexRooms()
+                {
+                    UserId = index.User.Id,
+                    You = true,
+                    BShares = true,
+                    FFriends = false,
+                    FGroups = false,
+                    TagOptions = TagOptions.NoFilter
+                };
+
+            rooms = await MainClient.GetRoomsAsync(indexRooms);
+
+            render = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowTagSettings() => await DialogService.OpenAsync("Filter words", ds =>
+    @<div>
+        <p>Filter words from letters to asterisks. Don't have to be exact. If letter <q>a</q> is on the list, then all words that contains <q>a</q> or <q>A</q> will be filtered.</p>
+        <EditForm Model="TagStr" class="d-flex">
+            <input type="text" @bind-value="TagStr" class="form-control" placeholder="Add a tag" style="height: auto;" />
+            <button type="submit" @onclick="AddTag" class="btn btn-success">
+                <RadzenIcon Icon="add" Style="display: flex !important" />
+            </button>
+        </EditForm>
+
+        @{
+                async Task AddTag()
+                {
+                    var t = index.TagsFeeds.Where(x => x.Tag.ToLower().Contains(TagStr.ToLower())).FirstOrDefault();
+                    if (t == null)
+                    {
+                        var lt = new TagsFeed { Tag = TagStr, UserId = index.User.Id };
+                        var aTag = await MainClient.AddTagAsync(lt);
+
+                        index.TagsFeeds.Add(aTag);
+                        StateHasChanged();
+                        ds.Refresh();
+                    }
+
+                    TagStr = "";
+                }
+            }
+
+            <RadzenTabs>
+                <Tabs>
+                    <RadzenTabsItem Text="Tags">
+                        <div style="max-height: 250px; overflow-y: auto;">
+                            @foreach (var t in index.TagsFeeds.Where(x => !x.Blacklist).OrderBy(x => x.Tag))
+                            {
+                                string tagid = Guid.NewGuid().ToString();
+
+                                <div class="d-flex flex-row">
+                                    <input @onchange="UpdateCheck" class="my-auto" type="checkbox" id="@tagid" checked="@(t.Checked)" />
+                                    <label for="@tagid" class="my-auto ms-2">@t.Tag</label>
+                                    <button @onclick="Blacklist" class="btn btn-info ms-auto" type="button">
+                                        <RadzenIcon Icon="do_not_disturb" Style="display: flex !important;" />
+                                    </button>
+                                    <button @onclick="RemoveTag" class="btn btn-danger ms-1">
+                                        <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+                                <hr />
+
+                                async Task Blacklist()
+                                {
+                                    var bTag = await MainClient.BlacklistTagAsync(t);
+                                    await UpdatedTagFeed(bTag);
+                                }
+
+                                async Task UpdateCheck()
+                                {
+                                    var uTag = await MainClient.UpdateCheckTagAsync(t);
+                                    await UpdatedTagFeed(uTag);
+                                }
+
+                                async Task RemoveTag()
+                                {
+                                    var dTag = await MainClient.DeleteTagFeedAsync(t);
+                                    await RemovedTagFeed(dTag);
+                                }
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Blacklist">
+                        <div>
+                            @foreach (var t in index.TagsFeeds.Where(x => x.Blacklist).OrderBy(x => x.Tag))
+                            {
+                                <div class="d-flex flex-row">
+                                    <label class="my-auto ms-2">@t.Tag</label>
+                                    <button @onclick="RemoveBlacklist" class="btn btn-info ms-auto" type="button">
+                                        <RadzenIcon Icon="rule" Style="display: flex !important;" />
+                                    </button>
+                                    <button @onclick="RemoveTag" class="btn btn-danger ms-1">
+                                        <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+                                <hr />
+
+                                async Task RemoveBlacklist()
+                                {
+                                    var rTag = await MainClient.RemoveBlacklistTagAsync(t);
+                                    await UpdatedTagFeed(rTag);
+                                }
+
+                                async Task RemoveTag()
+                                {
+                                    var dTag = await MainClient.DeleteTagFeedAsync(t);
+                                    await RemovedTagFeed(dTag);
+                                }
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+            @{
+                async Task UpdatedTagFeed(TagsFeed tag)
+                {
+                    var t = index.TagsFeeds.Where(x => x.TagsFeedId == tag.TagsFeedId).FirstOrDefault();
+                    index.TagsFeeds.Remove(t);
+                    index.TagsFeeds.Add(tag);
+                    await getRooms();
+                    StateHasChanged();
+                    ds.Refresh();
+                }
+
+                async Task RemovedTagFeed(TagsFeed tag)
+                {
+                    var t = index.TagsFeeds.Where(x => x.TagsFeedId == tag.TagsFeedId).FirstOrDefault();
+                    index.TagsFeeds.Remove(t);
+                    await getRooms();
+                    StateHasChanged();
+                    ds.Refresh();
+                }
+            }
+        </div>
+    , new DialogOptions { Width = "50%" }
+    );
+
+    private async Task ShowFriendsSettings() => await DialogService.OpenAsync("Friends", ds =>
+    @<div class="w-100">
+        <p>Don't want to see posts from a friend? Add them to this list.</p>
+        <RadzenTabs>
+            <Tabs>
+                <RadzenTabsItem Text="Filter">
+                    @foreach (var f in lFriends.Where(x => x.Filter))
+                        {
+                            <div class="d-flex flex-row my-2">
+                                <PPName UserId="@f.FriendId"></PPName>
+                                <button @onclick="RemoveFilter" class="btn btn-danger">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+                            </div>
+                            <hr />
+
+                            async Task RemoveFilter()
+                            {
+                                var rfFriend = await MainClient.RemoveFriendFilterAsync(f);
+                                await UpdatedFriend(rfFriend);
+                                ds.Refresh();
+                            }
+                        }
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Blacklist">
+                        @foreach (var f in lFriends.Where(x => x.Blacklist))
+                        {
+                            <div class="d-flex flex-row my-2">
+                                <PPName UserId="@f.FriendId"></PPName>
+                                <button @onclick="RemoveBlacklist" class="btn btn-danger">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+                            </div>
+                            <hr />
+
+                            async Task RemoveBlacklist()
+                            {
+                                var rfFriend = await MainClient.RemoveFriendBlacklistAsync(f);
+                                await UpdatedFriend(rfFriend);
+                                ds.Refresh();
+                            }
+                        }
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Search">
+                        <div style="display: flex; position: relative;">
+                            <input type="text" @bind-value="friendStr" @oninput="(EventArgs) => FindFriendsLocal(EventArgs.Value.ToString())" class="form-control" placeholder="Search" />
+                            @if (!string.IsNullOrWhiteSpace(friendStr))
+                            {
+                                <button @onclick="Clear" type="button" class="position-absolute" style="background-color: white; border-color: white; opacity: 1; border-width: 0; align-self: center; height: 90%; z-index: 1; right: 0;">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+
+                                async Task Clear()
+                                {
+                                    friendStr = "";
+                                    ds.Refresh();
+                                }
+                            }
+                        </div>
+
+                        <div>
+                            @foreach (var f in lFriends)
+                            {
+                                <div class="d-flex flex-row m-1">
+                                    <PPName UserId="@f.FriendId"></PPName>
+                                    @if (!f.Filter)
+                                    {
+                                        <button @onclick="AddFilter" class="btn btn-success me-1">
+                                            <RadzenIcon Icon="rule" Style="display: flex !important;" />
+                                        </button>
+
+                                        async Task AddFilter()
+                                        {
+                                            var aff = await MainClient.AddFriendFilterAsync(f);
+                                            await UpdatedFriend(aff);
+                                        }
+                                    }
+
+                                    @if (!f.Blacklist)
+                                    {
+                                        <button @onclick="AddBlacklist" class="btn btn-success">
+                                            <RadzenIcon Icon="do_not_disturb" Style="display: flex !important;" />
+                                        </button>
+
+                                        async Task AddBlacklist()
+                                        {
+                                            var abf = await MainClient.AddBlacklistFriendAsync(f);
+                                            await UpdatedFriend(abf);
+                                        }
+                                    }
+                                </div>
+                            }
+
+                            @{
+                                async Task UpdatedFriend(FriendDuo friend)
+                                {
+                                    var f = index.Friends.Where(x => x.FriendDuoId == friend.FriendDuoId).FirstOrDefault();
+                                    index.Friends.Remove(f);
+                                    index.Friends.Add(friend);
+                                    await getRooms();
+                                    StateHasChanged();
+                                    ds.Refresh();
+                                }
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+            @{
+                async Task FindFriendsLocal(string value)
+                {
+                    lFriends = index.Friends.Where(x => index.SuFriends.Any(y => y.Name.ToLower().Contains(value.ToLower()) && x.FriendId == y.Id)).ToList();
+                    //users = _userManager.Users.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+                    friendStr = value;
+                    ds.Refresh();
+                }
+            }
+        </div>, new DialogOptions { Width = "50%" }
+);
+
+    private async Task ShowGroupsSettings() => await DialogService.OpenAsync("Groups", ds =>
+    @<div class="w-100">
+        <p>Don't want to see posts from a group? Add them to this list.</p>
+        <RadzenTabs>
+            <Tabs>
+                <RadzenTabsItem Text="Filter">
+                    @foreach (var r in index.RolesFilter)
+                        {
+                            var g = index.Groups.Where(x => x.GroupId == r.GroupId).FirstOrDefault();
+                            <div class="d-flex flex-row my-auto">
+                                <lumine8.Client.Pages.Group.GroupPPName Group="g"></lumine8.Client.Pages.Group.GroupPPName>
+                                <button @onclick="RemoveFilter" class="btn btn-danger">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+                            </div>
+
+                            <hr />
+
+                            async Task RemoveFilter()
+                            {
+                                var role = await MainClient.GroupRemoveFilterAsync(r);
+
+                                var rf = index.RolesFilter.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                var lr = index.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                index.RolesFilter.Remove(rf);
+                                index.Roles.Remove(lr);
+                                index.Roles.Add(role);
+                                StateHasChanged();
+                                ds.Refresh();
+
+                            }
+                        }
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="Blacklist">
+                        @foreach (var r in index.RolesBlacklist)
+                        {
+                            var g = index.Groups.Where(x => x.GroupId == r.GroupId).FirstOrDefault();
+                            <div class="d-flex flex-row my-auto">
+                                <lumine8.Client.Pages.Group.GroupPPName Group="g"></lumine8.Client.Pages.Group.GroupPPName>
+                                <button @onclick="RemoveBlacklist" class="btn btn-danger">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+                            </div>
+
+                            <hr />
+
+                            async Task RemoveBlacklist()
+                            {
+                                var role = await MainClient.GroupRemoveBlacklistAsync(r);
+
+                                var rb = index.RolesBlacklist.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                var lr = index.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                index.RolesBlacklist.Remove(rb);
+                                index.Roles.Remove(lr);
+                                index.Roles.Add(role);
+                                StateHasChanged();
+                                ds.Refresh();
+                            }
+                        }
+                    </RadzenTabsItem>
+
+                    <RadzenTabsItem Text="Search">
+                        <div style="display: flex; position: relative;">
+                            <input type="text" @bind-value="groupsStr" @oninput="(EventArgs) => FindGroupsLocal(EventArgs.Value.ToString())" @onfocusin="() => groupsTake = 50" @onfocusout="() => groupsTake = 0" class="form-control" placeholder="Search" />
+                            @if (!string.IsNullOrWhiteSpace(groupsStr))
+                            {
+                                <button @onclick="Clear" type="button" class="position-absolute" style="background-color: white; border-color: white; opacity: 1; border-width: 0; align-self: center; height: 90%; z-index: 1; right: 0;">
+                                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                                </button>
+
+                                async Task Clear()
+                                {
+                                    groupsStr = "";
+                                    await FindGroupsLocal(groupsStr);
+                                }
+                            }
+                        </div>
+
+                        <div class="w-100">
+                            @foreach (var g in lgroups)
+                            {
+                                var r = index.Roles.Where(x => x.GroupId == g.GroupId).FirstOrDefault();
+                                if (r != null)
+                                {
+                                    <div class="d-flex flex-row m-1">
+                                        <lumine8.Client.Pages.Group.GroupPPName group="g"></lumine8.Client.Pages.Group.GroupPPName>
+                                        @if (!r.Filter)
+                                        {
+                                            <button @onclick="AddFilter" type="button" class="btn btn-success me-1">
+                                                <RadzenIcon Icon="rule" Style="display: flex !important;" />
+                                            </button>
+                                            async Task AddFilter()
+                                            {
+                                                var role = await MainClient.GroupAddFilterAsync(r);
+
+                                                var rf = index.RolesFilter.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                                var lr = index.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                                index.RolesFilter.Remove(rf);
+                                                index.Roles.Remove(lr);
+                                                index.RolesFilter.Add(role);
+                                                index.Roles.Add(role);
+                                                StateHasChanged();
+                                                ds.Refresh();
+                                            }
+                                        }
+                                        @if (!r.Blacklist)
+                                        {
+                                            <button @onclick="AddBlacklist" type="button" class="btn btn-success">
+                                                <RadzenIcon Icon="do_not_disturb" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task AddBlacklist()
+                                            {
+                                                var role = await MainClient.GroupAddFilterAsync(r);
+
+                                                var rb = index.RolesBlacklist.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                                var lr = index.Roles.Where(x => x.RoleId == role.RoleId).FirstOrDefault();
+                                                index.RolesBlacklist.Remove(rb);
+                                                index.Roles.Remove(lr);
+                                                index.RolesBlacklist.Add(role);
+                                                index.Roles.Add(role);
+                                                StateHasChanged();
+                                                ds.Refresh();
+                                            }
+                                        }
+                                    </div>
+
+                                    <hr />
+                                }
+                            }
+                        </div>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+
+            @{
+                async Task FindGroupsLocal(string value)
+                {
+                    await FindGroups(value);
+                    ds.Refresh();
+                }
+            }
+        </div>
+    , new DialogOptions() { Width = "50%" }
+ );
+    async Task getRooms()
+    {
+        rooms = await MainClient.GetRoomsAsync(indexRooms);
+    }
+
+    private async Task UpdatedFriend(FriendDuo friend)
+    {
+        var f = index.Friends.Where(x => x.FriendDuoId == friend.FriendDuoId).FirstOrDefault();
+        index.Friends.Remove(f);
+        index.Friends.Add(friend);
+        rooms = await MainClient.GetRoomsAsync(indexRooms);
+        StateHasChanged();
+    }
+
+    private async Task UpdateHours()
+    {
+        var hr = await MainClient.UpdateHoursAsync(index.User);
+        index.User.HoursFeed = hr.Hours;
+        rooms = await MainClient.GetRoomsAsync(indexRooms);
+    }
+
+    async Task Yourself()
+    {
+        indexRooms.You = !indexRooms.You;
+        await getRooms();
+    }
+
+    async Task FindFriends(string value)
+    {
+        lsuFriends = index.SuFriends.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+        friendStr = value;
+    }
+
+    async Task FindGroups(string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            lgroups = index.Groups.Where(x => x.Name.ToLower().Contains(value.ToLower())).AsQueryable();
+        else
+            lgroups = index.Groups.AsQueryable();
+        groupsStr = value;
+    }
+}

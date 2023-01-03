@@ -1,0 +1,177 @@
+﻿@page "/Register"
+
+@inject MainProto.MainProtoClient MainClient
+
+@inject NavigationManager navigationManager
+@inject AccountManager signInManager
+@inject SingletonVariables sv
+
+<PageTitle>Register</PageTitle>
+
+<style>
+    main {
+        width: 90% !important;
+    }
+
+    .form-group {
+        background-color: initial;
+    }
+
+    span {
+        font-size: 10pt;
+    }
+
+    label {
+        font-size: 18pt;
+    }
+
+    label, h4 {
+        color: white;
+    }
+
+    a {
+        color: #0366d6;
+    }
+
+    .li {
+        color: white;
+        text-align: left;
+        font-size: 16pt;
+        border: none;
+        padding: 0;
+    }
+
+    h4 {
+        font-size: 22pt;
+    }
+
+    hr {
+        border-color: grey;
+    }
+
+    .bl {
+        border: 2px solid black;
+        border-radius: 1rem;
+    }
+
+    .sp {
+        margin: 0 auto;
+        text-align: center;
+        width: 100%;
+    }
+
+    .pl {
+        text-align: center;
+        font-size: 14pt;
+    }
+
+    .login {
+        border-radius: 1rem 0 0 1rem;
+    }
+
+    .feed {
+        border-radius: 0 1rem 1rem 0;
+    }
+</style>
+
+@if (!sv.isDesktop)
+{
+    <style>
+        .login {
+            border-radius: 1rem 1rem 0 0;
+        }
+
+        .feed {
+            border-radius: 0 0 1rem 1rem;
+        }
+
+        .li {
+            font-size: 9pt;
+        }
+
+        .intro {
+            flex-direction: column !important;
+        }
+
+        .exp p, h5 {
+            font-size: 6pt;
+        }
+
+        .regform {
+            width: 100% !important;
+        }
+
+        .btnIndex {
+            margin-bottom: 2rem !important;
+        }
+
+        #sep {
+            display: none;
+        }
+
+        .bl {
+            flex-direction: column;
+        }
+    </style>
+}
+
+<p class="text-danger">Caution for web users: It is highly recommended that you save or write down your mnemonic and private key after registering for an account.</p>
+
+<EditForm Model="loginUser" OnValidSubmit="RegisterAccount" class="regform p-2" style="background-color: initial !important; left: 0; bottom: 0;">
+    <h4>Create a new account</h4>
+    <hr />
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    @if (!string.IsNullOrWhiteSpace(error))
+    {
+        <p>@error</p>
+    }
+
+    <div class="form-group">
+        <label for="username">Username <span style="color: black;">(Case sensitive and no spaces)</span></label>
+        <InputText @bind-Value="loginUser.Username" class="form-control" id="username" pattern="^\S+$"></InputText>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password</label>
+        <InputText @bind-Value="loginUser.Password" type="password" class="form-control" id="password"></InputText>
+    </div>
+
+    <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <InputText @bind-Value="loginUser.ConfirmPassword" type="password" class="form-control" id="confirmPassword"></InputText>
+    </div>
+
+    @*<div class="form-group d-flex flex-row">
+    <input type="checkbox" class="my-auto me-1" />
+    <label class="my-auto">I agree to the <a href="/Constitution" target="_blank" style="color: #0053b1;">Terms of Service</a></label>
+    </div>*@
+
+    <button type="submit" class="btn btn-primary-fill" style="background-color: #655876; color: white; opacity: 1;">Register</button>
+    <a href="/Login" @onclick="@(() => navigationManager.NavigateTo("/Login", true))" class="btn btn-primary-fill" style="background-color: #655876; color: white;">Login</a>
+</EditForm>
+
+@code {
+    private LoginUser loginUser = new();
+    private string error = "";
+
+    private async Task RegisterAccount()
+    {
+        try
+        {
+            var ca = await MainClient.CreateAccountAsync(loginUser);
+
+            signInManager.response = ca;
+
+            var b = await signInManager.SetupAccountAsync(loginUser);
+            if (b)
+                navigationManager.NavigateTo("introduction", true);
+        }
+        catch (System.Exception ex)
+        {
+            error = "Error: User already exist, or there was an error in creating account.";
+        }
+    }
+}

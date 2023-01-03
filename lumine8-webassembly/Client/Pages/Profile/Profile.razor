@@ -1,0 +1,937 @@
+﻿@page "/u/{Username}"
+
+@using System.IO
+@using System.Linq
+
+@inject HttpClient Http
+@inject SingletonVariables variables
+@inject MainProto.MainProtoClient MainClient
+
+@inject AuthenticationService authService
+
+@inject DialogService dialogService
+@inject EnumToString enumConverter
+
+@inject NavigationManager navigationManager
+@inject TooltipService tooltipService
+
+@inject SingletonVariables variables
+@inject IJSRuntime JSRuntime
+
+@if (render)
+{
+    <PageTitle>lumine8 - @model.User.Name</PageTitle>
+}
+
+<style>
+    @@media (min-width: 769px) {
+        main {
+            width: 75% !important;
+        }
+
+        #a {
+            height: 0;
+        }
+
+            #a > div {
+                margin-right: 0;
+            }
+
+        #b {
+            margin: auto;
+        }
+
+        #grid {
+            margin: 0 3rem !important;
+        }
+
+        .f-width {
+            width: 428px;
+        }
+    }
+
+    #feed {
+        width: 640px !important;
+    }
+
+    .rz-dialog {
+        width: 75% !important;
+    }
+</style>
+
+@if (!variables.isDesktop)
+{
+    <style>
+        #settings {
+            position: inherit !important;
+            width: 100%;
+        }
+
+        #feed {
+            width: 100% !important;
+        }
+
+        #profile {
+            flex-direction: column;
+        }
+    </style>
+}
+
+
+@if (render)
+{
+    <MyAlert @ref="alert" />
+
+    <nav id="nav" class="m-auto">
+        <ul class="pagination m-2 d-flex flex-row flex-wrap">
+            <li class="page-item m-2" style="width: max-content;">
+                <a class="page-link text-center active" href="/u/@(model.User.Username)">Profile</a>
+            </li>
+            @if (((model.ProfileSecurity.Pictures == SecurityLevel.PrivateLevel)
+           && (model.PrivateProfiles.Where(x => x.Pictures == true && x.UserId == model.User.Id
+           && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+           || (model.ProfileSecurity.Pictures == SecurityLevel.FriendsLevel && isFriend)
+           || model.ProfileSecurity.Pictures == SecurityLevel.PublicLevel
+           || isMod)
+            {
+                <li class="page-item m-2" style="width: max-content;">
+                    <a class="page-link text-center" href="/u/p/@(model.User.Username)">Pictures</a>
+                </li>
+            }
+
+            @if (isMod)
+            {
+                <li class="page-item m-2" style="width: max-content;">
+                    <a class="page-link text-center" href="/security">Security</a>
+                </li>
+            }
+
+            @if (isFriend)
+            {
+                <li class="mx-2 my-auto" style="width: max-content;">
+                    <div class="custom-control custom-switch">
+                        <input @onchange="ChangePriority" id="@priority" checked="@(model.Friend.Priority)" type="checkbox" class="custom-control-input" />
+                        <label class="custom-control-label" for="@priority">Higher Priority</label>
+                    </div>
+                </li>
+
+                async Task ChangePriority()
+                {
+                    model.Friend.Priority = !model.Friend.Priority;
+
+                    var ch = await MainClient.ChangePriorityAsync(model.Friend, authService.headers);
+                    alert.InvokeAlert($"Higher Priority is now set to {ch.Priority}", MyAlert.Alerts.Info, true);
+                }
+            }
+
+            <li class="ms-auto my-auto" style="width: max-content;">
+                @if (!string.IsNullOrWhiteSpace(model.SignedInUser.Id) && !isMod && variables.isDesktop)
+                {
+                    <button type="button" class="btn btn-success-fill me-3" @onclick="@(async () => await chatHub.SendAsync("OpenRoom", authService.loginUser, model.User.Id))">Send message</button>
+                }
+                @if (model.SignedInUser.Id != model.User.Id)
+                {
+                    if (model.Friend != null)
+                    {
+                        <button class="btn btn-danger-fill" type="button" @onclick="RemoveFriend">
+                            <RadzenIcon Icon="person_remove" Style="display: flex !important;" />
+                        </button>
+
+                        async Task RemoveFriend()
+                        {
+                            var rf = await MainClient.UnFriendAsync(new Id { Id_ = model.User.Id }, authService.headers);
+                            navigationManager.NavigateTo($"/u/{rf.Username}", true);
+                            alert.InvokeAlert($"You are no longer friends with {rf.Name}", MyAlert.Alerts.Warning);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(request.RequestId))
+                    {
+                        <button class="btn btn-success-fill" @onclick="Accept">Accept request</button>
+
+                        async Task Accept()
+                        {
+                            var afr = await MainClient.AcceptFriendRequestProfileAsync(request, authService.headers);
+                            alert.InvokeAlert($"You are now friends with {afr.Name}", MyAlert.Alerts.Success);
+                            isFriend = !isFriend;
+                        }
+                    }
+                    else if (!isFriend && model.User.AllowRequests && authService.isAuthenticated)
+                    {
+                        <button class="btn btn-info-fill" @onclick="SendRequest">
+                            <RadzenIcon Icon="person_add" Style="display: flex !important;" />
+                        </button>
+
+                        async Task SendRequest()
+                        {
+                            if (string.IsNullOrEmpty(request.RequestId))
+                            {
+                                await notifyHub.SendAsync("SendFriendRequest", request);
+                            }
+                        }
+                    }
+                }
+            </li>
+        </ul>
+    </nav>
+
+    <MobileUI>
+        <Settings>
+            <div class="mx-auto" id="settings" style="overflow: auto; position: sticky;">
+                <ProfilePicture User="model.User" signedInUser="model.SignedInUser" OnClick="ShowUploads" bUpload="true"></ProfilePicture>
+                <div class="card p-0">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">About me </span>
+                        <RadzenIcon Icon="description" Style="display: flex !important;" />
+                    </h5>
+                    @if ((((model.ProfileSecurity.AboutMe == SecurityLevel.PrivateLevel)
+                   && (model.PrivateProfiles.Where(x => x.AboutMe == true && x.UserId == model.User.Id
+                   && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                   || (model.ProfileSecurity.AboutMe == SecurityLevel.FriendsLevel && isFriend)
+                   || model.ProfileSecurity.AboutMe == SecurityLevel.PublicLevel)
+                   || isMod)
+                    {
+                        if (!dAboutMe)
+                        {
+                            if (model.AboutMe != null && !string.IsNullOrWhiteSpace(model.AboutMe.AboutMeDescription))
+                            {
+                                <p id="aboutMe" class="card-body m-0" style="max-width: fit-content; white-space: pre-line;">@model.AboutMe.AboutMeDescription</p>
+                            }
+                            else
+                            {
+                                <p class="card-body text-center text-danger">No about me info</p>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <p class="card-body text-center text-danger">No about me info</p>
+                    }
+
+                    @if (isMod)
+                    {
+                        if (dAboutMe)
+                        {
+                            <EditForm Model="model.AboutMe" OnValidSubmit="EditAboutMe" class="m-0">
+                                <InputTextArea @bind-Value="model.AboutMe.AboutMeDescription" rows="5" class="w-100 form-control">@model.AboutMe.AboutMeDescription</InputTextArea>
+                                <div class="text-right m-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <RadzenIcon Icon="save" Style="display: flex !important;" />
+                                    </button>
+                                    <button @onclick="() => dAboutMe = false" class="btn btn-danger">
+                                        <RadzenIcon Icon="cancel" Style="display: flex !important;" />
+                                    </button>
+                                </div>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <button @onclick="() => dAboutMe = true" class="btn btn-info mb-2 me-2 ms-auto" style="width: max-content;">
+                                <RadzenIcon Icon="edit" Style="display: flex !important;" />
+                            </button>
+                        }
+                    }
+                </div>
+
+                <div class="card">
+                    <h5 class="card-header">
+                        <MyTooltip Text="Links">
+                            <RadzenIcon Icon="link" Style="display: flex !important;" />
+                        </MyTooltip>
+                    </h5>
+
+                    @{
+                        int k = 0;
+                        foreach (var l in links)
+                        {
+                            int j = k;
+                            <div class="d-flex flex-row">
+                                <a href="@(l.Key.Address)" @onclick="GoToLink" class="my-auto ms-2">@l.Key.Name</a>
+                                @if (isMod)
+                                {
+                                    if (l.Value)
+                                    {
+                                        if (isMod)
+                                        {
+                                            <button class="btn btn-danger ms-auto me-2 my-1 d-block" @onclick="RemoveLink">
+                                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                            </button>
+
+                                            async Task RemoveLink()
+                                            {
+                                                links.Remove(await MainClient.DeleteLinkAsync(l.Key, authService.headers));
+                                            }
+                                        }
+                                        <button class="btn btn-info my-1 me-2 ms-1" @onclick="() => links[l.Key] = false">
+                                            <RadzenIcon Icon="visibility" Style="display: flex !important;" />
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-danger my-1 me-2 ms-auto" @onclick="() => links[l.Key] = true">
+                                            <RadzenIcon Icon="visibility_off" Style="display: flex !important;" />
+                                        </button>
+                                    }
+                                }
+                            </div>
+
+                            async Task GoToLink()
+                            {
+                                navigationManager.NavigateTo(l.Key.Address, true);
+                            }
+
+                            if (l.Value)
+                            {
+                                <EditForm Model="l" OnValidSubmit="SaveLink" class="m-2">
+                                    <label>Name</label>
+                                    <InputText @bind-Value="l.Key.Name" class="form-control"></InputText>
+
+                                    <label>Address</label>
+                                    <InputText @bind-Value="l.Key.Address" class="form-control"></InputText>
+
+                                    <button type="submit" class="btn btn-success d-block me-2 ms-auto mt-1">
+                                        <RadzenIcon Icon="save" Style="display: flex !important;" />
+                                    </button>
+                                </EditForm>
+
+                                async Task SaveLink()
+                                {
+                                    await MainClient.UpdateLinkAsync(l.Key, authService.headers);
+                                    linkAlert.InvokeAlert($"Updated: {DateTime.Now}", MyAlert.Alerts.Success);
+                                }
+                            }
+
+                            k++;
+                        }
+
+                        @if (isMod)
+                        {
+                            <MyAlert @ref="linkAlert"></MyAlert>
+
+                            <span class="m-2">
+                                <button @onclick="CreateLink" class="btn btn-success">
+                                    <RadzenIcon Icon="add_circle" Style="display: flex !important;" />
+                                </button>
+                            </span>
+
+                            async Task CreateLink()
+                            {
+                                var cl = await MainClient.CreateLinkAsync(new Link { UserId = model.SignedInUser.Id }, authService.headers);
+                                links.Add(cl, true);
+                            }
+                        }
+                    }
+                </div>
+
+                <div class="card" style="height: min-content;">
+                    <div class="card-header d-flex align-items-center">
+                        @if (((model.ProfileSecurity.Friends == SecurityLevel.PrivateLevel)
+                       && (model.PrivateProfiles.Where(x => x.Friends == true && x.UserId == model.User.Id
+                       && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                       || (model.ProfileSecurity.Friends == SecurityLevel.FriendsLevel && isFriend)
+                       || model.ProfileSecurity.Friends == SecurityLevel.PublicLevel
+                       || isMod)
+                        {
+                            <MyTooltip Text="Friends">
+                                <h5 class="d-flex m-auto w-100" style="line-height: inherit;">
+                                    <RadzenIcon Icon="person" Style="display: flex !important;" />
+                                    <span class="ms-1">(@(model.Friends.Count()))</span>
+                                </h5>
+                            </MyTooltip>
+                        }
+                        else
+                        {
+                            <MyTooltip Text="Friends">
+                                <h5 class="d-flex m-auto w-100" style="line-height: inherit;">
+                                    <RadzenIcon Icon="person" Style="display: flex !important;" />
+                                    <span class="ms-1">(0)</span>
+                                </h5>
+                            </MyTooltip>
+                        }
+                    </div>
+                    @if (((model.ProfileSecurity.Friends == SecurityLevel.PrivateLevel)
+                   && (model.PrivateProfiles.Where(x => x.Friends == true && x.UserId == model.User.Id
+                   && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                   || (model.ProfileSecurity.Friends == SecurityLevel.FriendsLevel && isFriend)
+                   || model.ProfileSecurity.Friends == SecurityLevel.PublicLevel
+                   || isMod)
+                    {
+                        <div class="p-3">
+                            <div class="d-flex flex-row flex-wrap f-width" style="justify-content: center; margin: auto;">
+                                @foreach (var f in model.SuFriends.Take(9))
+                                {
+                                    if (bMutual)
+                                    {
+                                        if (model.MutualFriends.Where(x => x == f.Id).FirstOrDefault() != null)
+                                        {
+                                            <MainPP UserId="@f.Id"></MainPP>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <MainPP UserId="@f.Id"></MainPP>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <p @onclick="() => { reloadPosts = false; dialog.display = true; }" class="btn btn-link ms-2">See all</p>
+                    }
+
+                </div>
+                <div class="card">
+                    <div class="card-header d-flex flex-row align-items-center">
+                        @if (((model.ProfileSecurity.Groups == SecurityLevel.PrivateLevel)
+                       && (model.PrivateProfiles.Where(x => x.Groups == true && x.UserId == model.User.Id
+                       && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                       || (model.ProfileSecurity.Groups == SecurityLevel.FriendsLevel && isFriend)
+                       || model.ProfileSecurity.Groups == SecurityLevel.PublicLevel
+                       || isMod)
+                        {
+                            <MyTooltip Text="Groups">
+                                <h5 class="d-flex w-100 m-auto" style="line-height: inherit;">
+                                    <RadzenIcon Icon="groups" Style="display: flex !important;" />
+                                    <span class="ms-1">(@(model.Roles.Count()))</span>
+                                </h5>
+                            </MyTooltip>
+                        }
+                        else
+                        {
+                            <MyTooltip Text="Groups">
+                                <h5 class="d-flex w-100 m-auto" style="line-height: inherit;">
+                                    <RadzenIcon Icon="groups" Style="display: flex !important;" />
+                                    <span class="ms-1">(0)</span>
+                                </h5>
+                            </MyTooltip>
+                        }
+                        @if (model.SignedInUser.Id == model.User.Id)
+                        {
+                            <MyDropdown @ref="gDrop" isForce="false" Class="ms-auto" ContentClass="input-group-text" ContentStyle="right: 0;" ButtonClass="btn btn-info-fill">
+                                <ButtonFragment>
+                                    <RadzenIcon Icon="add_circle_outline" Style="display: flex !important;" />
+                                </ButtonFragment>
+                                <DropdownContent>
+                                    <EditForm Model="group" OnValidSubmit="CreateGroup" class="h-100 text-center p-2" style="display: inline-table; height: max-content !important; border: none;">
+                                        <InputText @bind-Value="group.Name" placeholder="Name" class="form-control"></InputText>
+                                        <div class="d-flex flex-column">
+                                            <label for="@security" class="mt-2 text-left">Security:</label>
+                                            <InputSelect @bind-Value="group.Security" class="form-select mb-3" id="@security">
+                                                @foreach (var level in System.Enum.GetValues(typeof(lumine8_GrpcService.Security)))
+                                                {
+                                                    <option value="@level">@enumConverter.ToSecurity((lumine8_GrpcService.Security)level)</option>
+                                                }
+                                    </InputSelect>
+
+                                    <label for="@GroupJoinOptions" style="text-align: left;">Join Options</label>
+                                    <InputSelect @bind-Value="group.GroupJoin" class="form-select mb-3" id="@GroupJoinOptions">
+                                        @foreach (var j in System.Enum.GetValues(typeof(Join)))
+                                                {
+                                            <option value="@j">@j</option>
+                                                }
+                                    </InputSelect>
+                                </div>
+                                <input type="submit" value="Create" class="d-flex btn btn-success-fill" />
+                            </EditForm>
+                        </DropdownContent>
+                    </MyDropdown>
+
+                            async Task CreateGroup()
+                            {
+                                var cg = await MainClient.CreateGroupAsync(group, authService.headers);
+                                groups.Add(cg.Group);
+                                model.Roles.Add(cg.Role);
+
+                                gDrop.display = false;
+                                group = new GroupModel { OwnerId = model.SignedInUser.Id };
+                                StateHasChanged();
+                            }
+                        }
+                    </div>
+                    <div class="p-3">
+                        @if (((model.ProfileSecurity.Groups == SecurityLevel.PrivateLevel)
+                       && (model.PrivateProfiles.Where(x => x.Groups == true
+                       && x.UserId == model.User.Id && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                       || (model.ProfileSecurity.Groups == SecurityLevel.FriendsLevel && isFriend)
+                       || model.ProfileSecurity.Groups == SecurityLevel.PublicLevel
+                       || isMod)
+                        {
+                            <input @oninput="(EventArgs) => SearchGroups(EventArgs.Value.ToString())" class="form-control" @onfocusin="() => groupsTake = 50" @onfocusout="() => groupsTake = 9" placeholder="Search Groups" />
+
+                            async Task SearchGroups(string value)
+                            {
+                                groups = qGroups.Where(x => x.Name.ToLower().Contains(value.ToLower())).ToList();
+
+                                if (string.IsNullOrWhiteSpace(value))
+                                    groups = groups.Take(50).ToList();
+                            }
+
+                            <hr />
+
+                            <div class="d-flex flex-row flex-wrap f-width">
+                                @foreach (var g in groups)
+                                {
+                                    <div class="m-1">
+                                        <lumine8_maui.Pages.Group.MainGPP group="g"></lumine8_maui.Pages.Group.MainGPP>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!--Places lived-->
+                <div class="card">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">Places Lived</span>
+                        <RadzenIcon Icon="home" Style="display: flex !important;" />
+                    </h5>
+                    @if (((model.ProfileSecurity.PlacesLived == SecurityLevel.PrivateLevel)
+                   && (model.PrivateProfiles.Where(x => x.PlacesLived == true && x.UserId == model.User.Id && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                   || (model.ProfileSecurity.PlacesLived == SecurityLevel.FriendsLevel && isFriend)
+                   || model.ProfileSecurity.PlacesLived == SecurityLevel.PublicLevel
+                   || isMod)
+                    {
+                        <PlaceLived User="model.User" disable="!isMod"></PlaceLived>
+                    }
+                </div>
+
+                <!--Work history-->
+                <div class="card">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">Work History</span>
+                        <RadzenIcon Icon="work" Style="display: flex !important;" />
+                    </h5>
+                    @if (((model.ProfileSecurity.WorkHistory == SecurityLevel.PrivateLevel)
+                   && (model.PrivateProfiles.Where(x => x.WorkHistory == true && x.UserId == model.User.Id
+                   && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                   || (model.ProfileSecurity.WorkHistory == SecurityLevel.FriendsLevel && isFriend)
+                   || model.ProfileSecurity.WorkHistory == SecurityLevel.PublicLevel
+                   || isMod)
+                    {
+                        <Work User="model.User" disable="!isMod"></Work>
+                    }
+                </div>
+
+                <!--Education-->
+                <div class="card">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">Education</span>
+                        <RadzenIcon Icon="school" Style="display: flex !important;" />
+                    </h5>
+                    @if (((model.ProfileSecurity.Education == SecurityLevel.PrivateLevel)
+                   && (model.PrivateProfiles.Where(x => x.Education == true
+                   && x.UserId == model.User.Id && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+                   || (model.ProfileSecurity.Education == SecurityLevel.FriendsLevel && isFriend)
+                   || model.ProfileSecurity.Education == SecurityLevel.PublicLevel
+                   || isMod)
+                    {
+                        <EducationP disable="!isMod" User="model.User"></EducationP>
+                    }
+                </div>
+
+                @if ((((model.ProfileSecurity.Interests == SecurityLevel.PrivateLevel)
+               && (model.PrivateProfiles.Where(x => x.Interests == true && x.UserId == model.User.Id
+               && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+               || (model.ProfileSecurity.Interests == SecurityLevel.FriendsLevel && isFriend)
+               || model.ProfileSecurity.Interests == SecurityLevel.PublicLevel)
+               || isMod)
+                {
+                    <Interests User="model.User" disable="!isMod" signedInUser="model.SignedInUser"></Interests>
+                }
+
+                <!--Petitions-->
+                <div class="card">
+                    <h5 class="card-header d-flex">
+                        <span class="my-auto me-1">Petitions</span>
+                    </h5>
+                    <details class="m-2">
+                        <summary>Detail</summary>
+                        <div class="p-2">
+                            @foreach (var p in model.Petitions)
+                            {
+                                <div>
+                                    <p class="m-0">@p.Petition</p>
+                                    <a class="m-0" href="/petition/@p.PetitionId">Link</a>
+                                    <hr class="my-2" />
+                                </div>
+                            }
+                        </div>
+                    </details>
+
+                    
+                </div>
+            </div>
+        </Settings>
+        <!--LUMINE8-->
+        <Feed>
+            <div class="ms-4" id="feed">
+                @if (isMod)
+                {
+                    <UserPost signedInUser="model.SignedInUser" OnPost="Posted"></UserPost>
+                    async Task Posted(Room room)
+                    {
+                        rooms.Add(room);
+                        rooms = rooms.OrderByDescending(x => x.Date).ToList();
+                        StateHasChanged();
+                    }
+                }
+                @if (((model.ProfileSecurity.Lumine == SecurityLevel.PrivateLevel)
+               && (model.PrivateProfiles.Where(x => x.Lumine == true
+               && x.UserId == model.User.Id && x.WhoId == model.SignedInUser.Id).FirstOrDefault() != null))
+               || (model.ProfileSecurity.Lumine == SecurityLevel.FriendsLevel && isFriend)
+               || model.ProfileSecurity.Lumine == SecurityLevel.PublicLevel
+               || isMod)
+                {
+                    <div class="d-flex flex-row">
+                        <select @bind="month" @oninput="ChangeMonth" class="form-select">
+                            @foreach (var m in System.Enum.GetValues(typeof(Month)))
+                            {
+                                var count = rooms.Where(x => x.Date.ToDateTime().Month == Convert.ToInt32(m) + 1 && x.Date.ToDateTime().Year == year).Count();
+                                <option value="@((int)m + 1)">@m (@count)</option>
+                            }
+                        </select>
+
+                        <select @bind="year" @oninput="ChangeYear" class="form-select">
+                            @for (int i = 2021; 2023 >= i; i++)
+                            {
+                                var count = rooms.Where(x => x.Date.ToDateTime().Year == i).Count();
+                                <option value="@(i)">@i (@count)</option>
+                            }
+                        </select>
+                    </div>
+
+                    async Task ChangeMonth(ChangeEventArgs args)
+                    {
+                        month = Convert.ToInt32(args.Value);
+                    }
+
+                    async Task ChangeYear(ChangeEventArgs args)
+                    {
+                        year = Convert.ToInt32(args.Value);
+                    }
+
+                    foreach (var r in rooms.Where(x => x.Date.ToDateTime().Month == month && x.Date.ToDateTime().Year == year))
+                    {
+                        <Post room="r" OnClick="Refresh" reload="reloadPosts"></Post>
+
+                        async Task Refresh()
+                        {
+                            rooms.Remove(r);
+                            StateHasChanged();
+                        }
+                    }
+                }
+            </div>
+        </Feed>
+    </MobileUI>
+
+    @if (dUpload)
+    {
+        <div class="position-fixed" style="top: 0; left: 0; width: 100%; height: 100%; overflow: auto; z-index: 101;">
+            <div class="d-flex flex-column p-2" style="margin: auto; box-shadow: 0px 0px 1px 5000px rgba(0,0,0,0.8); background-color: white; width: max-content;">
+                <button type="button" @onclick="() => { dUpload = false; }" class="btn ms-auto">
+                    <RadzenIcon Icon="clear" Style="display: flex !important;" />
+                </button>
+
+                <InputFile OnChange="GetPPFile" accept="image/*" required></InputFile>
+                <p style="color: black !important;">Max size: 1024x1024</p>
+
+                @if (!string.IsNullOrEmpty(ppUploadString))
+                {
+                    <EditForm Model="ppFile" OnValidSubmit="ppUpload" class="d-flex flex-column">
+                        <img class="m-auto" style="width: 256px; border-radius: 1rem;" src="@(ppUploadString)" />
+                        <button type="submit" disabled="@uploading" class="btn btn-success-fill mt-2 mx-auto" style="width: max-content;">
+                            <RadzenIcon Icon="file_upload" Style="display: flex !important;" />
+                        </button>
+                    </EditForm>
+
+                    async Task ppUpload()
+                    {
+                        if (ppFile.FirstOrDefault() != null && System.Text.RegularExpressions.Regex.Match(ppFile.FirstOrDefault().ContentType, @"image/*").Success)
+                        {
+                            uploading = true;
+                            StateHasChanged();
+
+                            var file = new MultipartFormDataContent();
+
+                            Stream stream = ppFile.FirstOrDefault().OpenReadStream(1024 * 1024);
+                            MemoryStream ms = new MemoryStream();
+                            await stream.CopyToAsync(ms);
+
+                            file.Add(new ByteArrayContent(ms.ToArray()), "\"file\"", ppFile.FirstOrDefault().Name);
+
+                            var upp = await Http.PostAsync($"api/UploadPP", file);
+                            if (upp.IsSuccessStatusCode)
+                            {
+                                var img = await upp.Content.ReadFromJsonAsync<Image>();
+
+                                ppFile.Clear();
+                                ppUploadString = null;
+                                model.ProfilePictures.Add(img);
+                            }
+
+                            uploading = false;
+                        }
+                    }
+                }
+            </div>
+
+            <div class="d-flex" style="flex-wrap: wrap;" id="pp">
+                @foreach (var p in model.ProfilePictures)
+                {
+                    <div class="d-flex flex-column m-2 p-1" style="width: min-content; border: 1px solid #464342;">
+                        <EditForm Model="p" OnValidSubmit="RemovePP" class="me-auto">
+                            <button class="btn btn-danger-fill" type="submit" style="background-color: #a72828; opacity: 1;">
+                                <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                            </button>
+                        </EditForm>
+
+                        <img style="width: 256px; border-radius: 1rem;" src="@variables.uri/p/u/@(model.SignedInUser.Id)/@(p.FileName)" />
+
+                        <EditForm Model="p" OnValidSubmit="Switch" class="ms-auto">
+                            <input class="btn btn-info-fill" type="submit" value="Switch" style="background-color: #17a2b8; opacity: 1;" />
+                        </EditForm>
+                    </div>
+
+                    async Task RemovePP()
+                    {
+                        if (!string.IsNullOrWhiteSpace(variables.PP.ImageId))
+                        {
+                            if (p.ImageId == variables.PP.ImageId)
+                            {
+                                variables.PP = null;
+                                variables.Image = null;
+                            }
+                        }
+                        var dpp = await MainClient.DeleteProfilePictureAsync(p);
+                        model.ProfilePictures.Remove(dpp);
+                    }
+
+                    async Task Switch()
+                    {
+                        variables.PP = await MainClient.SwitchProfilePictureAsync(p);
+                        variables.Image = p;
+                    }
+                }
+            </div>
+        </div>
+
+        async Task GetPPFile(InputFileChangeEventArgs e)
+        {
+            ppFile.Add(e.File);
+
+            string format = ppFile.FirstOrDefault().ContentType.Substring(ppFile.FirstOrDefault().ContentType.IndexOf('/') + 1);
+
+            var resizedImageFile = await ppFile.FirstOrDefault().RequestImageFileAsync(format, 1024, 1024);
+            var buffer = new byte[resizedImageFile.Size];
+            await resizedImageFile.OpenReadStream().ReadAsync(buffer);
+            var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            ppUploadString = imageDataUrl;
+
+            this.StateHasChanged();
+        }
+    }
+}
+
+<MyDialog @ref="dialog" Title="Friends" CustomClose="true">
+    <Button>
+        <button type="button" class="btn ms-auto" style="border: none;" @onclick="() => { reloadPosts = true; dialog.display = false; }">
+            <RadzenIcon Icon="close" Style="display: flex !important;" />
+        </button>
+    </Button>
+
+    <Content>
+        @{
+            <input @oninput="async (EventArgs) => { await SearchAllFriends(EventArgs.Value.ToString()); }" type="text" class="form-control" placeholder="Search Friends" />
+
+            async Task SearchAllFriends(string value)
+            {
+                suFriends = lsuFriends.Where(x => x.Name.ToLower().Contains(value.ToLower()) || x.Username.ToLower().Contains(value.ToLower())).ToList();
+                StateHasChanged();
+            }
+
+            <hr />
+
+            @if (model.User.Id != model.SignedInUser.Id)
+            {
+                <div class="d-flex">
+                    <input type="checkbox" class="my-auto" @onchange="() => bMutual = !bMutual" checked="@bMutual" id="mutual" />
+                    <label class="mx-2" for="mutual">Mutual Friends</label>
+                </div>
+            }
+
+            <div class="d-flex flex-row flex-wrap" style="justify-content: center;">
+                @foreach (var f in suFriends)
+                {
+                    if (bMutual)
+                    {
+                        if (model.MutualFriends.Where(x => x == f.Id).FirstOrDefault() != null)
+                        {
+                            <div class="m-1">
+                                <MainPP UserId="@f.Id"></MainPP>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="m-1">
+                            <MainPP UserId="@f.Id"></MainPP>
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </Content>
+</MyDialog>
+
+@code {
+    [Parameter] public string Username { get; set; }
+
+    private HubConnection notifyHub, chatHub;
+    public string fileName = null;
+
+    private MyAlert alert;
+    private bool reloadPosts = true;
+    private MyDialog dialog = new();
+
+    private string priority = Guid.NewGuid().ToString(), security = Guid.NewGuid().ToString(), GroupJoinOptions = Guid.NewGuid().ToString();
+
+    private MyAlert linkAlert;
+    private MyDropdown gDrop;
+
+    private Request request = new();
+
+    private Dictionary<Link, bool> links = new();
+    private bool linkMsg = false;
+
+    private IQueryable<FriendDuo> qFriends;
+    private List<GroupModel> qGroups = new();
+
+    private GroupModel group = new GroupModel();
+
+    private List<GroupModel> groups = new();
+    private List<SharedUser> suFriends = new(), lsuFriends = new();
+    private Request friendRequest;
+    private bool bMutual = false;
+
+    private int friendsTake = 9;
+    private int groupsTake = 9;
+    private bool render = false;
+
+    private bool uploading = false;
+
+    private Message lumine = new();
+    private string hashtag = "";
+    private List<MessageHashtag> hashtags = new();
+
+    private Room room;
+    private List<Room> rooms = new();
+    private int month = DateTime.UtcNow.Month;
+    private int year = DateTime.UtcNow.Year;
+
+    private bool isMod = false, isFriend = false, dAboutMe = false, lumineButtons = false, dUpload = false;
+
+    private string uploadString, ppUploadString;
+    private List<IBrowserFile> file = new List<IBrowserFile>(), ppFile = new List<IBrowserFile>();
+    private string uploadCategory = "Uploads";
+
+    public enum Month
+    {
+        January, February, March, April, May, June, July, August, September, October, November, December
+    }
+
+    ProfilePageModel model = new();
+
+    private async Task GetFile(InputFileChangeEventArgs e)
+    {
+        file.Add(e.File);
+
+        string format = file.FirstOrDefault().ContentType.Substring(file.FirstOrDefault().ContentType.IndexOf('/') + 1);
+
+        var resizedImageFile = await file.FirstOrDefault().RequestImageFileAsync(format, 256, 256);
+        var buffer = new byte[resizedImageFile.Size];
+        await resizedImageFile.OpenReadStream().ReadAsync(buffer);
+        var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+        uploadString = imageDataUrl;
+        this.StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        notifyHub = new HubConnectionBuilder()
+        .WithAutomaticReconnect()
+        .WithUrl(navigationManager.ToAbsoluteUri($"/notify"))
+        .Build();
+
+        chatHub = new HubConnectionBuilder()
+        .WithAutomaticReconnect()
+        .WithUrl(navigationManager.ToAbsoluteUri($"/chathub"))
+        .Build();
+
+        await notifyHub.StartAsync();
+        await chatHub.StartAsync();
+
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("Username"))
+                Http.DefaultRequestHeaders.Add("Username", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("PrivateKey"))
+                Http.DefaultRequestHeaders.Add("PrivateKey", authService.loginUser.PrivateKey);
+        }
+
+        model = await MainClient.GetProfilePageModelAsync(new Id { Id_ = Username }, authService.headers);
+        rooms = model.Rooms.OrderByDescending(x => x.Date).ToList();
+        groups = model.Groups.ToList();
+        suFriends = model.SuFriends.ToList();
+        qGroups = model.Groups.ToList();
+
+        foreach (var l in model.Links)
+            links.Add(l, false);
+
+        if (model.SignedInUser.Id == model.User.Id)
+            isMod = true;
+
+        if (string.IsNullOrEmpty(model.Request.RequestId))
+        {
+            request.SentToId = model.User.Id;
+            request.SenderId = model.SignedInUser.Id;
+        }
+
+        if (suFriends.Where(x => x.Id == model.SignedInUser.Id).FirstOrDefault() != null)
+            isFriend = true;
+
+        render = true;
+
+        group = new GroupModel { OwnerId = model.SignedInUser.Id };
+        lumine = new Message { SenderId = model.SignedInUser.Id };
+        room = new Room { OwnerId = model.SignedInUser.Id };
+
+        StateHasChanged();
+
+        notifyHub.On<Request>("SentFriendRequest", (request) =>
+        {
+            this.request = request;
+            alert.InvokeAlert("Friend request sent", MyAlert.Alerts.Info, true);
+            StateHasChanged();
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool b)
+    {
+        if (b && render)
+        {
+            await JSRuntime.InvokeVoidAsync("windowLoad");
+        }
+    }
+
+    async Task ShowUploads()
+    {
+        dUpload = true;
+    }
+
+    private async Task EditAboutMe()
+    {
+        await MainClient.UpdateAboutMeAsync(model.AboutMe, authService.headers);
+        dAboutMe = false;
+    }
+}

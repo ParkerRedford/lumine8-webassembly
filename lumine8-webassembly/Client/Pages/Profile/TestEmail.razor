@@ -1,0 +1,20 @@
+﻿@page "/testemail"
+
+@inject HttpClient Http
+@inject SingletonVariables variables
+
+<button @onclick="SendEmail" type="button" class="btn">Test Email</button>
+
+@if(!string.IsNullOrWhiteSpace(e))
+{
+    <p>@e</p>
+}
+
+@code {
+    string e = string.Empty;
+
+    private async Task SendEmail()
+    {
+        e = await Http.GetStringAsync($"api/TestEmail");
+    }
+}

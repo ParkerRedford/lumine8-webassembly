@@ -1,0 +1,33 @@
+﻿@layout MainLayout
+@inherits LayoutComponentBase
+
+<style>
+    .active {
+        background-color: #494055;
+        color: white !important;
+    }
+    .nav-link {
+        color: black;
+    }
+    .nav-link:focus {
+        color: white;
+    }
+</style>
+
+<div class="page d-flex flex-row">
+    <MobileUI>
+        <Settings>
+            <div class="sidebar">
+                <AccountNavMenu />
+            </div>
+        </Settings>
+
+        <Feed>
+            <div class="main">
+                <div class="content px-4">
+                    @Body
+                </div>
+            </div>
+        </Feed>
+    </MobileUI>
+</div>

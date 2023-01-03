@@ -1,0 +1,155 @@
+﻿@page "/petitions"
+
+@inject HttpClient Http
+@inject MainProto.MainProtoClient MainClient
+@inject AuthenticationService authService
+
+@inject IJSRuntime js
+
+<h2>Petitions</h2>
+
+@if (render)
+{
+    <MobileUI>
+        <Settings>
+            <div>
+                <p>The petition will be saved as a json file; only the petitioner is able to download the file.</p>
+
+                @if (authService.isAuthenticated)
+                {
+                    <p>For legitimate reasons, use your real name and address.</p>
+                    <p>Your name and address you selected for petitioning will be sent to the petitioner and the official who is being petitioned.</p>
+                    
+                    <EditForm Model="petition" OnValidSubmit="CreatePetition">
+                        <InputTextArea @bind-Value="petition.Petition" class="form-control" placeholder="Create a petition"></InputTextArea>
+                        <button type="submit" class="btn btn-success-fill ms-auto">Submit</button>
+                    </EditForm>
+                    <p>Name: @petitions.User.Name</p>
+
+                    if (string.IsNullOrWhiteSpace(petitions.Lived.PlaceLivedId))
+                    {
+                        <p>Address: You have not selected an address.</p>
+                    }
+                    else
+                    {
+                        <p>Country: @petitions.Country.Name</p>
+                        <p>State: @petitions.State.Name</p>
+                        <p>City: @petitions.City.Name</p>
+                        <p>Street: @petitions.Lived.StreetName</p>
+                        <p>Postal Code / Zip code: @petitions.Lived.PostalCode</p>
+                    }
+                }
+                else
+                {
+                    <p>Login to sign petitions</p>
+                }
+            </div>
+        </Settings>
+        <Feed>
+            <div class="ms-2">
+                <input type="text" @oninput="(EventArgs) => {lpetitions = petitions.Petitions.Where(x => x.Petition.ToLower().Contains(EventArgs.Value.ToString().ToLower())).ToList();}" class="form-control" placeholder="Search petitions"></input>
+                @foreach (var p in lpetitions)
+                {
+                    var u = petitions.Users.Where(x => x.Id == p.CreatedById).FirstOrDefault();
+                    var sigs = petitions.PetitionSigs.Where(x => x.PetitionId == p.PetitionId).Count();
+                    var uSig = petitions.PetitionSigs.Where(x => x.UserId == petitions.User.Id && x.PetitionId == p.PetitionId).FirstOrDefault();
+
+                    <div class="card">
+                        <div class="card-body d-flex flex-row">
+                            <p class="me-2">@p.Petition</p>
+                            <div class="d-flex flex-column ms-auto">
+                                <a href="/petition/@p.PetitionId" target="_blank">
+                                   <RadzenIcon Icon="link" Style="display: flex !important" />     
+                                </a>
+                            </div>
+
+                            @if (p.CreatedById == petitions.User.Id)
+                            {
+                                <button type="button" style="height: max-content;" @onclick="async () => {petitions.Petitions.Remove(await MainClient.DeletePetitionAsync(p, authService.headers)); lpetitions.Remove(p);}" class="btn btn-danger-fill ms-2">
+                                    <RadzenIcon Icon="delete" Style="display: flex !important;" />
+                                </button>
+                            }
+                        </div>
+                        <div class="card-footer d-flex flex-row">
+                            <div class="d-flex flex-column">
+                                <p>Created by: <a href="/u/@u.Username">@u.Name</a></p>
+                                <p>Signatures: @sigs</p>
+                                @if(p.CreatedById == petitions.User.Id)
+                                {
+                                    <a href="api/DownloadPetitionAsJson/@p.PetitionId/@authService.loginUser.Username/@authService.loginUser.PrivateKey" style="display: flex; height: max-content;" class="btn btn-success-fill" download="petition-@(p.PetitionId).json">
+                                        <RadzenIcon Icon="save" Style="display: flex: !important" />
+                                    </a>
+                                }
+                            </div>
+                            @if (authService.isAuthenticated)
+                            {
+                                if (uSig == null)
+                                {
+                                    <button type="button" style="height: max-content;" @onclick="async () => petitions.PetitionSigs.Add(await MainClient.SignPetitionAsync(new PetitionSig { PetitionId = p.PetitionId, UserId = petitions.User.Id }, authService.headers))" class="btn btn-info-fill ms-auto mt-auto">
+                                        <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" style="height: max-content;" @onclick="async () => petitions.PetitionSigs.Remove(await MainClient.UnsignPetitionAsync(uSig, authService.headers))" class="btn btn-danger-fill ms-auto mt-auto">
+                                        <RadzenIcon Icon="assignment" Style="display: flex !important;" />
+                                    </button>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </Feed>
+    </MobileUI>
+}
+
+@code {
+    private bool render = false;
+
+    private SharedUser user = new();
+
+    private PetitionsPageModel petitions = new();
+    private PetitionModel petition = new();
+
+    private List<PetitionModel> lpetitions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await authService.InitializeAuthenticate();
+
+        if (authService.isAuthenticated)
+        {
+            if (!Http.DefaultRequestHeaders.Contains("Username"))
+                Http.DefaultRequestHeaders.Add("Username", authService.loginUser.Username);
+            if (!Http.DefaultRequestHeaders.Contains("PrivateKey"))
+                Http.DefaultRequestHeaders.Add("PrivateKey", authService.loginUser.PrivateKey);
+        }
+
+        petitions = await MainClient.GetPetitionsAsync(new Empty(), authService.headers);
+        lpetitions = petitions.Petitions.ToList();
+        petition.CreatedById = petitions.User.Id;
+
+        render = true;
+        StateHasChanged();
+    }
+
+    private async Task CreatePetition()
+    {
+        petitions.Petitions.Add(await MainClient.CreatePetitionAsync(petition, authService.headers));
+
+        petition = new();
+        petition.CreatedById = petitions.User.Id;
+    }
+
+    public static class FileUtil
+    {
+        public async static Task SaveAs(IJSRuntime js, string filename, byte[] data)
+        {
+            await js.InvokeAsync<object>(
+                "saveAsFile",
+                filename,
+                Convert.ToBase64String(data));
+        }
+    }
+}
