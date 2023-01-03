@@ -11,6 +11,7 @@ using lumine8_GrpcService;
 using Image = lumine8_GrpcService.Image;
 using Share = lumine8_GrpcService.Share;
 using Microsoft.EntityFrameworkCore;
+using lumine8.Aes;
 
 namespace Services
 {
@@ -51,9 +52,15 @@ namespace Services
 
         public bool Authorize(ServerCallContext context, string Username)
         {
-            var privateKey = context.GetHttpContext().Request.Headers["PrivateKey"].FirstOrDefault();
+            /*var privateKey = context.GetHttpContext().Request.Headers["PrivateKey"].FirstOrDefault();
             var acc = new Nethereum.Web3.Accounts.Account(privateKey);
-            return applicationDbContext.Users.Where(x => x.Username == Username && x.PublicKey == acc.PublicKey).FirstOrDefault() != null;
+            return applicationDbContext.Users.Where(x => x.Username == Username && x.PublicKey == acc.PublicKey).FirstOrDefault() != null;*/
+
+            var pass = context.GetHttpContext().Request.Headers["Password"].FirstOrDefault() ?? string.Empty;
+            var key = context.GetHttpContext().Request.Headers["PrivateKey"].FirstOrDefault() ?? string.Empty;
+
+            var aes = new CAes(pass, key);
+            return applicationDbContext.Users.Where(x => x.Username == Username && x.PublicKey == aes.Encrypt(Username, aes.iv, aes.key).ToString()) != null;
         }
 
         /*public bool bVerified(string UserId)
@@ -155,13 +162,15 @@ namespace Services
             var wall = new Wallet(mnemonic.ToString(), pw);
             var acc = wall.GetAccount(0);
 
+            var aes = new CAes(loginUser.Password, loginUser.PrivateKey);
+
             if (!string.IsNullOrWhiteSpace(loginUser.Username) && applicationDbContext.Users.Where(x => x.Username == loginUser.Username).FirstOrDefault() == null)
             {
                 string salt = Guid.NewGuid().ToString("N");
 
                 var user = new ApplicationUser
                 {
-                    PublicKey = acc.PublicKey,
+                    PublicKey = aes.Encrypt(loginUser.Username, aes.iv, aes.key).ToString(),
                     //PasswordSalt = salt,
                     //PasswordStamp = HashString(loginUser.Password, salt),
                     HoursFeed = 168,
